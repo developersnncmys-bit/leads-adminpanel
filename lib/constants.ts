@@ -1,0 +1,120 @@
+import { LeadStatus } from './types';
+
+export const SERVICES = [
+  'Insurance',
+  'Tourist Visa',
+  'Rental Agreement',
+  'Lease Agreement',
+  'Passport',
+  'PAN Card',
+  'Senior Citizen Card',
+  'Police Verification Certificate (PVC)',
+  'MSME Certificate',
+  'Police Clearance Certificate (PCC)',
+  'Affidavits/Annexure',
+];
+
+export const DISTRICTS = [
+  'Bangalore Urban',
+  'Bangalore Rural',
+  'Mysuru',
+  'Mangaluru',
+  'Hubli-Dharwad',
+  'Belagavi',
+  'Kalaburagi',
+  'Shivamogga',
+  'Tumakuru',
+  'Davangere',
+  'Ballari',
+  'Vijayapura',
+  'Hassan',
+  'Mandya',
+  'Udupi',
+  'Chikkamagaluru',
+  'Kodagu',
+  'Raichur',
+  'Koppal',
+  'Gadag',
+  'Other',
+];
+
+export const LEAD_SOURCES = [
+  'Website',
+  'WhatsApp',
+  'Google Ads',
+  'Facebook Ads',
+  'Instagram',
+  'Referral',
+  'Walk-in',
+  'Phone Call',
+  'Other',
+];
+
+export const STATUS_CONFIG: Record<
+  LeadStatus,
+  { label: string; color: string; bg: string; border: string; dot: string }
+> = {
+  new: {
+    label: 'New Lead',
+    color: 'text-blue-700',
+    bg: 'bg-blue-50',
+    border: 'border-blue-200',
+    dot: 'bg-blue-500',
+  },
+  overdue: {
+    label: 'Overdue',
+    color: 'text-red-700',
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    dot: 'bg-red-500',
+  },
+  today: {
+    label: "Today's Follow-up",
+    color: 'text-teal-700',
+    bg: 'bg-teal-50',
+    border: 'border-teal-200',
+    dot: 'bg-teal-500',
+  },
+  followup: {
+    label: 'Follow-up',
+    color: 'text-amber-700',
+    bg: 'bg-amber-50',
+    border: 'border-amber-200',
+    dot: 'bg-amber-500',
+  },
+  inprocess: {
+    label: 'In Process',
+    color: 'text-cyan-700',
+    bg: 'bg-cyan-50',
+    border: 'border-cyan-200',
+    dot: 'bg-cyan-500',
+  },
+  converted: {
+    label: 'Converted',
+    color: 'text-green-700',
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    dot: 'bg-green-500',
+  },
+  dead: {
+    label: 'Dead',
+    color: 'text-gray-600',
+    bg: 'bg-gray-100',
+    border: 'border-gray-200',
+    dot: 'bg-gray-400',
+  },
+};
+
+export const NAV_ITEMS = [
+  { href: '/', label: 'Dashboard', icon: 'LayoutDashboard' },
+  { href: '/leads/add', label: 'Add Lead', icon: 'PlusCircle' },
+  { href: '/leads/new', label: 'New Leads', icon: 'UserPlus' },
+  { href: '/leads/overdue', label: 'Overdue', icon: 'AlertCircle' },
+  { href: '/leads/today', label: "Today's Follow-up", icon: 'CalendarCheck' },
+  { href: '/leads/followup', label: 'Follow-up', icon: 'UserCheck' },
+  { href: '/leads/inprocess', label: 'In Process', icon: 'Clock' },
+  { href: '/leads/converted', label: 'Converted', icon: 'CheckCircle' },
+  { href: '/leads/dead', label: 'Dead', icon: 'XCircle' },
+  { href: '/settings', label: 'Settings', icon: 'Settings' },
+  { href: '/blogs', label: 'Blogs', icon: 'BookOpen' },
+];
