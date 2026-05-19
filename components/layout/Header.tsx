@@ -130,12 +130,12 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
         <div className="flex items-center gap-2">
 
-          <Link href="/settings" className="p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
+          <Link href="/settings" className="hidden lg:block p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
             <Settings className="w-[18px] h-[18px]" />
           </Link>
 
           {/* Bell / mini dropdown */}
-          <div className="relative" ref={notifRef}>
+          <div className="hidden lg:block relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifications((v) => !v)}
               className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"

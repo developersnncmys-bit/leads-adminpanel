@@ -10,6 +10,8 @@ interface AddLeadContextType {
   closeModal: () => void;
   leads: Lead[];
   addLead: (lead: Lead) => void;
+  updateLead: (id: string, updates: Partial<Lead>) => void;
+  deleteLead: (id: string) => void;
 }
 
 const AddLeadContext = createContext<AddLeadContextType>({
@@ -18,6 +20,8 @@ const AddLeadContext = createContext<AddLeadContextType>({
   closeModal: () => {},
   leads: [],
   addLead: () => {},
+  updateLead: () => {},
+  deleteLead: () => {},
 });
 
 function loadLeads(): Lead[] {
@@ -26,7 +30,20 @@ function loadLeads(): Lead[] {
     const stored = localStorage.getItem('crm-leads');
     if (!stored) return MOCK_LEADS;
     const parsed: Lead[] = JSON.parse(stored);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : MOCK_LEADS;
+    if (!Array.isArray(parsed) || parsed.length === 0) return MOCK_LEADS;
+    // Stale check: if any non-admin lead is missing orderId it was saved before
+    // the formData update — reset to fresh mock data so all fields are visible.
+    const isStale = parsed.some(
+     (l) => l.leadType !== 'manual' && !l.orderId
+    );
+    if (isStale) {
+      // Preserve admin-added leads, replace website mock leads with fresh ones
+      const manualLeads = parsed.filter((l) => l.leadType === 'manual');
+      const fresh = [...manualLeads, ...MOCK_LEADS];
+      localStorage.setItem('crm-leads', JSON.stringify(fresh));
+      return fresh;
+    }
+    return parsed;
   } catch {
     return MOCK_LEADS;
   }
@@ -36,13 +53,19 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [leads, setLeads] = useState<Lead[]>(loadLeads);
 
-  const addLead = (lead: Lead) => {
-    setLeads((prev) => {
-      const next = [lead, ...prev];
-      localStorage.setItem('crm-leads', JSON.stringify(next));
-      return next;
-    });
+  const persist = (next: Lead[]) => {
+    localStorage.setItem('crm-leads', JSON.stringify(next));
+    return next;
   };
+
+  const addLead = (lead: Lead) =>
+    setLeads((prev) => persist([lead, ...prev]));
+
+  const updateLead = (id: string, updates: Partial<Lead>) =>
+    setLeads((prev) => persist(prev.map((l) => l.id === id ? { ...l, ...updates } : l)));
+
+  const deleteLead = (id: string) =>
+    setLeads((prev) => persist(prev.filter((l) => l.id !== id)));
 
   return (
     <AddLeadContext.Provider value={{
@@ -51,6 +74,8 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
       closeModal: () => setOpen(false),
       leads,
       addLead,
+      updateLead,
+      deleteLead,
     }}>
       {children}
     </AddLeadContext.Provider>

@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
-  UserCheck, Clock, CheckCircle, XCircle, Settings, BookOpen, X, Zap,
+  UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap,
 } from 'lucide-react';
-import { getDashboardStats, MOCK_AUTH_USER } from '@/lib/mockData';
+import { MOCK_AUTH_USER } from '@/lib/mockData';
+import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
   { href: '/leads/new',       label: 'New Leads',         icon: UserPlus,      key: 'new',       dot: '#3b82f6' },
@@ -20,8 +21,17 @@ const LEAD_NAV = [
 
 export default function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const stats = getDashboardStats();
+  const { leads } = useAddLead();
   const user = MOCK_AUTH_USER;
+  const stats: Record<string, number> = {
+    new:       leads.filter((l) => l.status === 'new').length,
+    overdue:   leads.filter((l) => l.status === 'overdue').length,
+    today:     leads.filter((l) => l.status === 'today').length,
+    followup:  leads.filter((l) => l.status === 'followup').length,
+    inprocess: leads.filter((l) => l.status === 'inprocess').length,
+    converted: leads.filter((l) => l.status === 'converted').length,
+    dead:      leads.filter((l) => l.status === 'dead').length,
+  };
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const isActive = (href: string) =>
@@ -90,7 +100,7 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Admin</p>
           </div>
           <NavLink href="/settings" label="Settings" icon={Settings} />
-          <NavLink href="/blogs" label="Blogs" icon={BookOpen} />
+          {/* <NavLink href="/blogs" label="Blogs" icon={BookOpen} /> */}
         </div>
 
         <div className="px-3 py-3 border-t border-gray-100">

@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
-  Settings, BookOpen, LogOut, Zap,
+  Settings, LogOut, Zap,
 } from 'lucide-react';
-import { getDashboardStats, MOCK_AUTH_USER } from '@/lib/mockData';
+import { MOCK_AUTH_USER } from '@/lib/mockData';
 import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
@@ -22,19 +22,27 @@ const LEAD_NAV = [
 
 const ADMIN_NAV = [
   { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/blogs',    label: 'Blogs',    icon: BookOpen },
+  // { href: '/blogs', label: 'Blogs', icon: BookOpen },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const stats = getDashboardStats();
+  const { leads, openModal } = useAddLead();
   const user = MOCK_AUTH_USER;
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
-  const { openModal } = useAddLead();
+  const stats: Record<string, number> = {
+    new:       leads.filter((l) => l.status === 'new').length,
+    overdue:   leads.filter((l) => l.status === 'overdue').length,
+    today:     leads.filter((l) => l.status === 'today').length,
+    followup:  leads.filter((l) => l.status === 'followup').length,
+    inprocess: leads.filter((l) => l.status === 'inprocess').length,
+    converted: leads.filter((l) => l.status === 'converted').length,
+    dead:      leads.filter((l) => l.status === 'dead').length,
+  };
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">

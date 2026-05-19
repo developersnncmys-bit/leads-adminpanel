@@ -3,29 +3,26 @@
 import { useState, useEffect } from 'react';
 import { X, UserPlus, CheckCircle } from 'lucide-react';
 import { useAddLead } from '@/context/AddLeadContext';
-import { SERVICES, DISTRICTS, LEAD_SOURCES } from '@/lib/constants';
-import { MOCK_USERS } from '@/lib/mockData';
-import type { Lead, User } from '@/lib/types';
+import { SERVICES, LEAD_SOURCES } from '@/lib/constants';
+import type { Lead } from '@/lib/types';
 
 
 interface FormData {
   name: string;
   email: string;
   mobileNumber: string;
-  district: string;
   service: string;
-  amount: string;
   address: string;
   source: string;
-  assignedTo: string;
-  followUpDate: string;
 }
 
-
 const INITIAL: FormData = {
-  name: '', email: '', mobileNumber: '', district: '',
-  service: '', amount: '', address: '', source: '',
-  assignedTo: '', followUpDate: '',
+  name: '',
+  email: '',
+  mobileNumber: '',
+  service: '',
+  address: '',
+  source: '',
 };
 
 // Field defined outside to prevent remount on each render
@@ -59,17 +56,9 @@ export default function AddLeadModal() {
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [employees, setEmployees] = useState<string[]>(() =>
-    MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
-  );
+  
 
-  useEffect(() => {
-    const stored = localStorage.getItem('crm-users');
-    if (stored) {
-      const users: User[] = JSON.parse(stored);
-      setEmployees(users.filter((u) => u.role === 'employee').map((u) => u.name));
-    }
-  }, []);
+  
 
   // Close on Escape key
   useEffect(() => {
@@ -107,25 +96,25 @@ export default function AddLeadModal() {
     setLoading(true);
     await new Promise((r) => setTimeout(r, 700));
     const newLead: Lead = {
-    slNo: leads.filter((l) => l.status === 'new').length + 1,
+    slNo: leads.length + 1,
     id: crypto.randomUUID(),
 
     name: form.name,
     email: form.email,
     mobileNumber: form.mobileNumber,
 
-    district: form.district,
+    district: '',
     service: form.service,
 
-    amount: Number(form.amount || 0),
+    amount: 0,
 
     address: form.address,
 
     source: form.source,
 
-    assignedTo: form.assignedTo || 'Unassigned',
+    assignedTo: 'Unassigned',
 
-    followUpDate: form.followUpDate,
+    followUpDate: '',
 
     status: 'new',
 
@@ -134,6 +123,7 @@ export default function AddLeadModal() {
     date: new Date().toISOString().split('T')[0],
     notes: [],
     createdAt: new Date().toISOString(),
+    leadType: 'manual',
     };
     addLead(newLead);
     setLoading(false);
@@ -221,12 +211,6 @@ export default function AddLeadModal() {
                   <Field label="Mobile Number" required error={errors.mobileNumber}>
                     <input type="tel" placeholder="10-digit mobile number" value={form.mobileNumber} onChange={set('mobileNumber')} maxLength={10} className={inputCls(errors.mobileNumber)} />
                   </Field>
-                  <Field label="District">
-                    <select value={form.district} onChange={set('district')} className={inputCls()}>
-                      <option value="">Select district</option>
-                      {DISTRICTS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </Field>
                   <Field label="Address">
                     <textarea placeholder="Enter address" value={form.address} onChange={set('address')} rows={2} className={`${inputCls()} resize-none`} />
                   </Field>
@@ -245,9 +229,6 @@ export default function AddLeadModal() {
                       {SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </Field>
-                  <Field label="Amount (₹)">
-                    <input type="number" placeholder="Enter amount" value={form.amount} onChange={set('amount')} min={0} className={inputCls()} />
-                  </Field>
                   <Field label="Lead Source">
                     <select value={form.source} onChange={set('source')} className={inputCls()}>
                       <option value="">Select source</option>
@@ -259,22 +240,7 @@ export default function AddLeadModal() {
 
               <hr className="border-gray-100" />
 
-              {/* Assignment */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Assignment</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Field label="Assign To">
-                    <select value={form.assignedTo} onChange={set('assignedTo')} className={inputCls()}>
-                      <option value="">Select employee</option>
-                      {employees.map((emp) => <option key={emp} value={emp}>{emp}</option>)}
-                    </select>
-                  </Field>
-                  <Field label="Follow-up Date">
-                    <input type="date" value={form.followUpDate} onChange={set('followUpDate')} className={inputCls()} />
-                  </Field>
-                </div>
-              </div>
-
+              
             </form>
           )}
         </div>

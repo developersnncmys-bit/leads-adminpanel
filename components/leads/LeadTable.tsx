@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, Download, ChevronUp, ChevronDown, Filter} from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Download, ChevronUp, ChevronDown, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
 import { SERVICES } from '@/lib/constants';
+import { useAddLead } from '@/context/AddLeadContext';
 import StatusBadge from './StatusBadge';
 import PaymentBadge from './PaymentBadge';
 
@@ -15,9 +17,9 @@ interface Props {
   onAssignChange?: (leadId: string, employee: string) => void;
 }
 
-const EMPLOYEES = MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name);
-
 export default function LeadTable({ leads, onStatusChange, onAssignChange }: Props) {
+  const router = useRouter();
+  const { deleteLead } = useAddLead();
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<keyof Lead>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -25,20 +27,39 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [districtFilter, setDistrictFilter] = useState<string>('all');
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [employees, setEmployees] = useState<string[]>(() =>
+    MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
+  );
 
-  const services = [
-  'Insurance',
-  'Tourist Visa',
-  'Rental Agreement',
-  'Lease Agreement',
-  'Passport',
-  'Pancard',
-  'Senior Citizen Card',
-  'Police Verification',
-  'MSME Certificate',
-  'Police Clearance Certificate',
-  'Affidavits/Annexure',
-  ];
+  useEffect(() => {
+    const stored = localStorage.getItem('crm-users');
+    if (stored) {
+      const users = JSON.parse(stored);
+      setEmployees(users.filter((u: { role: string }) => u.role === 'employee').map((u: { name: string }) => u.name));
+    }
+  }, []);
+
+  const allFilteredIds = (f: Lead[]) => new Set(f.map((l) => l.id));
+  const toggleSelect = (id: string) => setSelected(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const toggleSelectAll = (filteredLeads: Lead[]) => {
+    const ids = filteredLeads.map(l => l.id);
+    const allSelected = ids.every(id => selected.has(id));
+    if (allSelected) {
+      setSelected(prev => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n; });
+    } else {
+      setSelected(prev => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
+    }
+  };
+  const deleteSelected = () => {
+    selected.forEach(id => deleteLead(id));
+    setSelected(new Set());
+  };
+
   const districts = [...new Set(leads.map((l) => l.district))];
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
 
@@ -212,6 +233,20 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
 </div>
       </div>
 
+      {/* Bulk action bar — shown when rows are selected */}
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border-b border-blue-100">
+          <span className="text-sm font-semibold text-blue-700">{selected.size} lead{selected.size > 1 ? 's' : ''} selected</span>
+          <button
+            onClick={deleteSelected}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete Selected
+          </button>
+        </div>
+      )}
+
       {/* Table count */}
       <div className="px-4 py-2.5 bg-gray-50/50 border-b border-gray-50">
         <p className="text-xs text-gray-500 font-medium">
@@ -224,6 +259,15 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
         <table className="w-full">
           <thead className="bg-gray-50/50">
             <tr>
+              <th className="pl-4 pr-2 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={filtered.length > 0 && filtered.every(l => selected.has(l.id))}
+                  ref={el => { if (el) el.indeterminate = filtered.some(l => selected.has(l.id)) && !filtered.every(l => selected.has(l.id)); }}
+                  onChange={() => toggleSelectAll(filtered)}
+                  className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                />
+              </th>
               <Th col="slNo" label="Sl.No" className="w-14" />
               <Th col="date" label="Date" />
               <Th col="name" label="Name" />
@@ -233,13 +277,12 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
               <Th col="amount" label="Amount" />
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Payment</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Assigned To</th>
-      
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">
                   No leads found matching your search.
                 </td>
               </tr>
@@ -247,9 +290,17 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
               filtered.map((lead, index) => (
                <tr
                key={lead.id}
-               onClick={() => window.location.href = `/leads/view/${lead.id}`}
-               className="hover:bg-blue-50/30 transition-colors group cursor-pointer"
+               onClick={() => router.push(`/leads/view/${lead.id}`)}
+               className={`hover:bg-blue-50/30 transition-colors group cursor-pointer ${selected.has(lead.id) ? 'bg-blue-50/50' : ''}`}
                >
+                  <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(lead.id)}
+                      onChange={() => toggleSelect(lead.id)}
+                      className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-500 font-medium">{index + 1}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{lead.date}</td>
                   <td className="px-4 py-3">
@@ -271,13 +322,13 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
                   <td className="px-4 py-3">
                     <PaymentBadge status={lead.paymentStatus} />
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <select
                       defaultValue={lead.assignedTo}
                       onChange={(e) => onAssignChange?.(lead.id, e.target.value)}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer"
                     >
-                      {EMPLOYEES.map((emp) => (
+                      {employees.map((emp) => (
                         <option key={emp} value={emp}>{emp}</option>
                       ))}
                     </select>

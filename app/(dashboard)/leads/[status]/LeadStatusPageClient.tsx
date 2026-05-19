@@ -2,7 +2,6 @@
 
 import { use } from 'react';
 import { notFound } from 'next/navigation';
-import { getDashboardStats} from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
 import { LeadStatus } from '@/lib/types';
 import LeadTable from '@/components/leads/LeadTable';
@@ -45,7 +44,12 @@ export default function LeadStatusPageClient({ params }: { params: Promise<{ sta
 
   const s = status as LeadStatus;
   const leads = allLeads.filter((lead) => lead.status === s);
-  const stats = getDashboardStats();
+  const stats = {
+    new:       allLeads.filter((l) => l.status === 'new').length,
+    today:     allLeads.filter((l) => l.status === 'today').length,
+    followup:  allLeads.filter((l) => l.status === 'followup').length,
+    inprocess: allLeads.filter((l) => l.status === 'inprocess').length,
+  };
   const cfg = STATUS_CONFIG[s];
   const meta = STATUS_META[s];
   const Icon = meta.icon;

@@ -29,6 +29,21 @@ export interface Lead {
   notes: Note[];
   followUpDate?: string;
   createdAt: string;
+  // website-lead specific fields
+  leadType?: 'website' | 'manual';
+  time?: string;
+  orderId?: string;
+  applyingFor?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  placeOfBirth?: string;
+  educationQualification?: string;
+  employmentType?: string;
+  state?: string;
+  pinCode?: string;
+  nearbyPoliceStation?: string;
+  // flexible store for any extra service-specific form fields
+  formData?: Record<string, string>;
 }
 
 export interface Note {
