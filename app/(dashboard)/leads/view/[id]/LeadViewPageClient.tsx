@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { notFound, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowLeft, Phone, MessageSquare, Send, X, Calendar,
-  Trash2, CheckCircle, Clock, Plus,
+  ArrowLeft, Phone, Mail, MessageSquare, Send, X, Calendar,
+  Trash2, CheckCircle, Clock, Plus, User,
 } from 'lucide-react';
 import { MOCK_USERS } from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
@@ -31,12 +31,12 @@ function EditableField({ label, value, onChange }: {
 }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-600 mb-1">{label}:</p>
+      <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-800 bg-white uppercase tracking-wide focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-colors"
+        className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all placeholder-gray-400"
       />
     </div>
   );
@@ -210,6 +210,8 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
   const schema = getSchema(lead.service);
 
+  const initialFields = useRef<Record<string, string>>({});
+
   const [fields, setFields] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     schema.flat().forEach((f) => {
@@ -217,8 +219,11 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
       const val = resolveField(lead, f);
       init[f.key] = val === '—' ? '' : val;
     });
+    initialFields.current = { ...init };
     return init;
   });
+
+  const isDirty = Object.keys(fields).some((k) => fields[k] !== initialFields.current[k]);
 
   const [showComment, setShowComment] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
@@ -254,6 +259,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     });
 
     updateLead(lead.id, { ...(directUpdates as Partial<Lead>), formData: formDataUpdates });
+    initialFields.current = { ...fields };
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -281,106 +287,246 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     });
   };
 
+  const ALL_STATUSES: { label: string; status: LeadStatus; color: string; bg: string }[] = [
+    { label: 'Follow Up',  status: 'followup',  color: 'text-amber-700',   bg: 'bg-amber-50 border-amber-200'    },
+    { label: 'In Process', status: 'inprocess', color: 'text-violet-700',  bg: 'bg-violet-50 border-violet-200'  },
+    { label: 'Converted',  status: 'converted', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200'},
+    { label: 'Dead',       status: 'dead',      color: 'text-gray-500',    bg: 'bg-gray-50 border-gray-200'      },
+  ];
+
+  const cfg = STATUS_CONFIG[lead.status];
+  const initials = (lead.name ?? '?').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+
+  const WA_PATH = 'M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z';
+
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
-      {/* Back + Save */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link href={`/leads/${lead.status}`} className="p-2 rounded-xl hover:bg-white border border-gray-200 transition-colors">
-            <ArrowLeft className="w-4 h-4 text-gray-600" />
-          </Link>
-          <h1 className="text-lg font-bold text-gray-900">Lead Details</h1>
-        </div>
-        <button
-          onClick={handleSave}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all shadow-sm ${saved ? 'bg-emerald-500' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'}`}
+    <div className="max-w-6xl mx-auto space-y-5 pb-10">
+
+      {/* ── Top nav bar ────────────────────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <Link
+          href={`/leads/${lead.status}`}
+          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
-          {saved && <CheckCircle className="w-4 h-4" />}
-          {saved ? 'Saved!' : 'Save Changes'}
-        </button>
+          <ArrowLeft className="w-4 h-4" />
+          <span className="hidden sm:inline">Back to {cfg.label}</span>
+        </Link>
+        <span className="text-gray-200">/</span>
+        <span className="text-sm font-medium text-gray-700 truncate">{lead.name || 'Lead'}</span>
       </div>
 
-      {/* Main card */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      {/* ── Hero card ──────────────────────────────────────────── */}
+      <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-100">
 
-        {/* Card title */}
-        <div className="py-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold text-blue-600 text-center tracking-wide">Lead Details</h2>
-        </div>
+        {/* Dark gradient header */}
+        <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 px-6 pt-6 pb-5">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
 
-        {/* Editable fields grid */}
-        <div className="p-5 space-y-4">
-          {schema.map((row, ri) => (
-            <div key={ri} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {row.map((fieldDef, ci) =>
-                fieldDef
-                  ? <EditableField
-                      key={ci}
-                      label={fieldDef.label}
-                      value={fields[fieldDef.key] ?? ''}
-                      onChange={(v) => setField(fieldDef.key, v)}
-                    />
-                  : <div key={ci} />
-              )}
+            {/* Avatar */}
+            <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
+              <span className="text-white text-lg font-bold">{initials}</span>
             </div>
-          ))}
-        </div>
 
-        {/* Comments section */}
-        {lead.notes.length > 0 && (
-          <div className="px-5 pb-4 space-y-2">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-              <MessageSquare className="w-3.5 h-3.5" /> Comments
-            </p>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {lead.notes.map((note) => (
-                <div key={note.id} className="bg-gray-50 rounded-xl px-4 py-3">
-                  <p className="text-sm text-gray-800">{note.text}</p>
-                  <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> {note.author} · {note.createdAt}
-                  </p>
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h1 className="text-xl font-bold text-white leading-tight">{lead.name || '—'}</h1>
+                  <p className="text-slate-400 text-sm mt-0.5">{lead.service}</p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
+                    {lead.mobileNumber && (
+                      <a href={`tel:${lead.mobileNumber}`} className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white transition-colors">
+                        <Phone className="w-3.5 h-3.5 text-slate-500" />{lead.mobileNumber}
+                      </a>
+                    )}
+                    {lead.email && (
+                      <span className="flex items-center gap-1.5 text-sm text-slate-300">
+                        <Mail className="w-3.5 h-3.5 text-slate-500" />{lead.email}
+                      </span>
+                    )}
+                    {lead.assignedTo && lead.assignedTo !== 'Unassigned' && (
+                      <span className="flex items-center gap-1.5 text-sm text-slate-300">
+                        <User className="w-3.5 h-3.5 text-slate-500" />{lead.assignedTo}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
+                    {cfg.label}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        )}
+
+          {/* Stats row */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
+            {[
+              { label: 'Amount',  value: lead.amount > 0 ? `₹${lead.amount.toLocaleString('en-IN')}` : '—' },
+              { label: 'Payment', value: lead.paymentStatus === 'paid' ? 'Paid' : 'Unpaid' },
+              { label: 'Source',  value: lead.source || '—' },
+              { label: 'Date',    value: lead.date || '—' },
+            ].map(({ label, value }) => (
+              <div key={label} className="bg-white/5 rounded-xl px-3.5 py-2.5 border border-white/10">
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{label}</p>
+                <p className="text-sm font-semibold text-white mt-0.5 truncate">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {/* Action bar */}
-        <div className="border-t border-gray-100 px-5 py-4 flex flex-wrap items-center gap-2.5">
-          {/* Call */}
-          <a href={`tel:${lead.mobileNumber}`} className="w-9 h-9 rounded-lg bg-red-500 hover:bg-red-600 flex items-center justify-center flex-shrink-0 transition-colors">
-            <Phone className="w-4 h-4 text-white" />
+        <div className="bg-white px-6 py-4 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
+
+          {/* Contact */}
+          <a href={`tel:${lead.mobileNumber}`}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold shadow-sm transition-all hover:shadow-md">
+            <Phone className="w-3.5 h-3.5" /> Call
+          </a>
+          <a href={`https://wa.me/91${lead.mobileNumber}`} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#1fbc5a] text-white text-sm font-semibold shadow-sm transition-all hover:shadow-md">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white"><path d={WA_PATH} /></svg>
+            WhatsApp
           </a>
 
-          {/* WhatsApp */}
-          <a
-            href={`https://wa.me/91${lead.mobileNumber}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors overflow-hidden bg-[#25D366] hover:bg-[#20b558]"
-          >
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-            </svg>
-          </a>
+          <div className="w-px h-5 bg-gray-200" />
 
-          <div className="w-px h-6 bg-gray-200 mx-1" />
+          {/* Actions */}
+          <button onClick={() => setShowComment(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all">
+            <MessageSquare className="w-3.5 h-3.5" /> Comment
+          </button>
+          <button onClick={() => setShowFollowUp(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 hover:bg-amber-100 shadow-sm transition-all">
+            <Calendar className="w-3.5 h-3.5" /> Follow Up
+          </button>
 
-          <ActionBtn label="Add Comment" color="bg-gray-600"    onClick={() => setShowComment(true)} />
-          <ActionBtn label="Follow Up"   color="bg-teal-600"    onClick={() => setShowFollowUp(true)} />
-          <ActionBtn label="In Process"  color="bg-teal-800"    onClick={() => changeStatus('inprocess', 'In Process')} />
-          <ActionBtn label="Converted"   color="bg-green-700"   onClick={() => changeStatus('converted', 'Converted')} />
-          <ActionBtn label="Dead"        color="bg-red-700"     onClick={() => changeStatus('dead', 'Dead')} />
+          <div className="w-px h-5 bg-gray-200" />
 
+          {/* Status changers */}
+          <button onClick={() => changeStatus('inprocess', 'In Process')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
+              lead.status === 'inprocess'
+                ? 'bg-violet-600 text-white shadow-violet-200'
+                : 'bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100'
+            }`}>
+            {lead.status === 'inprocess' && <CheckCircle className="w-3.5 h-3.5" />}
+            In Process
+          </button>
+          <button onClick={() => changeStatus('converted', 'Converted')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
+              lead.status === 'converted'
+                ? 'bg-emerald-600 text-white shadow-emerald-200'
+                : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+            }`}>
+            {lead.status === 'converted' && <CheckCircle className="w-3.5 h-3.5" />}
+            Converted
+          </button>
+          <button onClick={() => changeStatus('dead', 'Dead')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
+              lead.status === 'dead'
+                ? 'bg-gray-700 text-white'
+                : 'bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200'
+            }`}>
+            {lead.status === 'dead' && <CheckCircle className="w-3.5 h-3.5" />}
+            Dead
+          </button>
+
+          {/* Delete */}
           <div className="ml-auto">
-            <button
-              onClick={handleDelete}
-              className="w-9 h-9 rounded-lg bg-red-100 hover:bg-red-200 flex items-center justify-center transition-colors"
-            >
-              <Trash2 className="w-4 h-4 text-red-600" />
+            <button onClick={handleDelete} title="Delete lead"
+              className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
+      </div>
+
+      {/* ── Body: form + sidebar ───────────────────────────────── */}
+      <div>
+
+        {/* Form fields */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">Lead Information</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Edit any field and save</p>
+            </div>
+            {(isDirty || saved) && (
+              <button onClick={handleSave}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
+                  saved
+                    ? 'bg-emerald-600 text-white shadow-emerald-200'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
+                }`}>
+                {saved ? <><CheckCircle className="w-3.5 h-3.5" /> Saved!</> : 'Save Changes'}
+              </button>
+            )}
+          </div>
+          <div className="p-6 space-y-4">
+            {schema.map((row, ri) => (
+              <div key={ri} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {row.map((fieldDef, ci) =>
+                  fieldDef
+                    ? <EditableField key={ci} label={fieldDef.label} value={fields[fieldDef.key] ?? ''} onChange={(v) => setField(fieldDef.key, v)} />
+                    : <div key={ci} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── Activity feed ─────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+          <div className="flex items-center gap-2.5">
+            <MessageSquare className="w-4 h-4 text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-900">Activity</h2>
+            {lead.notes.length > 0 && (
+              <span className="text-[11px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full tabular-nums">
+                {lead.notes.length}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowComment(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Comment
+          </button>
+        </div>
+
+        {lead.notes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 text-gray-300" />
+            </div>
+            <p className="text-sm text-gray-400">No activity yet</p>
+            <button onClick={() => setShowComment(true)} className="text-xs text-blue-600 font-medium hover:underline">Add first comment</button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {lead.notes.map((note) => (
+              <div key={note.id} className="flex gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold text-slate-600">
+                  {note.author[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1.5">
+                    <span className="text-sm font-semibold text-gray-900">{note.author}</span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(note.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">{note.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {showComment  && <CommentModal  onClose={() => setShowComment(false)}  onSubmit={addComment} />}
