@@ -31,7 +31,7 @@ const STATUS_META: Record<LeadStatus, {
 
 export default function LeadStatusPageClient({ params }: { params: Promise<{ status: string }> }) {
   const { status } = use(params);
-  const { openModal, leads: allLeads } = useAddLead();
+  const { leads: allLeads } = useAddLead();
   if (!VALID.includes(status as LeadStatus)) notFound();
 
   const s = status as LeadStatus;
@@ -52,13 +52,6 @@ export default function LeadStatusPageClient({ params }: { params: Promise<{ sta
             <p className="text-sm text-gray-400">{meta.description}</p>
           </div>
         </div>
-        <button
-          onClick={openModal}
-          className="hidden sm:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-blue-200"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Lead
-        </button>
       </div>
 
       <div className="flex items-center gap-2">

@@ -202,7 +202,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const lead = leads.find((l) => l.id === leadId);
   if (!lead) return notFound();
 
-  const schema = lead.leadType === 'manual' ? MANUAL_SCHEMA : getSchema(lead.service);
+  const schema = lead.leadType === 'manual' ? MANUAL_SCHEMA : getSchema(lead);
 
   const [showComment, setShowComment] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);

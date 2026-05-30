@@ -3,11 +3,10 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
+  LayoutDashboard, UserPlus, AlertCircle, CalendarCheck,
   UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
-import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
   { href: '/leads/new',       label: 'New Leads',         icon: UserPlus,      key: 'new',       dot: '#3b82f6' },
@@ -21,17 +20,7 @@ const LEAD_NAV = [
 
 export default function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
-  const { leads } = useAddLead();
   const user = useAuthUser();
-  const stats: Record<string, number> = {
-    new:       leads.filter((l) => l.status === 'new').length,
-    overdue:   leads.filter((l) => l.status === 'overdue').length,
-    today:     leads.filter((l) => l.status === 'today').length,
-    followup:  leads.filter((l) => l.status === 'followup').length,
-    inprocess: leads.filter((l) => l.status === 'inprocess').length,
-    converted: leads.filter((l) => l.status === 'converted').length,
-    dead:      leads.filter((l) => l.status === 'dead').length,
-  };
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const isActive = (href: string) =>
@@ -87,13 +76,12 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
           <NavLink href="/" label="Dashboard" icon={LayoutDashboard} />
-          <NavLink href="/leads/add" label="Add Lead" icon={PlusCircle} />
 
           <div className="pt-4 pb-1.5 px-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Pipeline</p>
           </div>
-          {LEAD_NAV.map(({ href, label, icon, key, dot }) => (
-            <NavLink key={href} href={href} label={label} icon={icon} badge={stats[key as keyof typeof stats] as number} dot={dot} />
+          {LEAD_NAV.map(({ href, label, icon, dot }) => (
+            <NavLink key={href} href={href} label={label} icon={icon} dot={dot} />
           ))}
 
           <div className="pt-4 pb-1.5 px-3">

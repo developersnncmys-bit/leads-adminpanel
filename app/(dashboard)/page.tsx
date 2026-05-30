@@ -7,6 +7,7 @@ import {
   AlertCircle,
   CalendarCheck,
   UserCheck,
+  Clock,
   CheckCircle,
   ArrowRight,
   FileText,
@@ -49,6 +50,13 @@ const PIPELINE_TABS = [
     icon: UserCheck,
   },
   {
+    key: 'inprocess',
+    label: 'In Process',
+    color: 'from-violet-500 to-violet-600',
+    href: '/leads/inprocess',
+    icon: Clock,
+  },
+  {
     key: 'converted',
     label: 'Total Converted',
     color: 'from-emerald-500 to-emerald-600',
@@ -58,7 +66,7 @@ const PIPELINE_TABS = [
 ];
 
 export default function DashboardPage() {
-  const { leads, openModal } = useAddLead();
+  const { leads } = useAddLead();
   const user = useAuthUser();
 
   const stats = {
@@ -108,28 +116,17 @@ export default function DashboardPage() {
     <div className="space-y-6">
 
       {/* HEADER */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            {greeting ? `${greeting}, ${user.name.split(' ')[0]}! 👋` : ''}
-          </h1>
-
-          <p className="text-sm text-gray-400 mt-1">
-            Here's what's happening with your leads today.
-          </p>
-        </div>
-
-        <button
-          onClick={openModal}
-          className="hidden sm:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
-        >
-          <UserPlus className="w-4 h-4" />
-          Add Lead
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {greeting ? `${greeting}, ${user.name.split(' ')[0]}! 👋` : ''}
+        </h1>
+        <p className="text-sm text-gray-400 mt-1">
+          Here's what's happening with your leads today.
+        </p>
       </div>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {PIPELINE_TABS.map(({ key, label, color, href, icon: Icon }) => {
           const count = stats[key as keyof typeof stats] as number;
 

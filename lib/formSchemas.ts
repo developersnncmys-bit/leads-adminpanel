@@ -499,10 +499,88 @@ export const MANUAL_SCHEMA: ServiceSchema = [
   ],
 ];
 
+/* ── Affidavit / Annexure ──────────────────────────────────── */
+// The affidavit form collects: name, mobile, email, address, state, district,
+// pin, plus the affidavit type (stored on the lead as `applyingFor`). We only
+// render those fields so the admin view doesn't show empty placeholders for
+// fields that were never asked.
+
+const AFFIDAVIT: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service',      key: 'service'      },
+    { label: 'Applying For', key: 'applyingFor'  },
+    { label: 'Amount',       key: 'amount'       },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    { label: 'Email ID',      key: 'email'        },
+    { label: 'Address',       key: 'address'      },
+  ],
+  [
+    { label: 'State',    key: 'state',    source: 'formData' },
+    { label: 'District', key: 'district'                     },
+    { label: 'Pin Code', key: 'pinCode',  source: 'formData' },
+  ],
+];
+
+/* ── Contact form leads ───────────────────────────────────── */
+// Used when the lead's source is 'Contact Us' (the main contact page).
+// The form only collects: name, mobile, email, service.
+
+const CONTACT_US: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    { label: 'Email ID',      key: 'email'        },
+    null,
+  ],
+];
+
+// Used when the lead's source is 'Blog Contact' (the sidebar form on blog
+// detail pages). Same as Contact Us but also collects address fields.
+
+const BLOG_CONTACT: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    { label: 'Email ID',      key: 'email'        },
+    { label: 'State',         key: 'state',   source: 'formData' },
+  ],
+  [
+    { label: 'District', key: 'district'                     },
+    { label: 'Pin Code', key: 'pinCode',  source: 'formData' },
+    null,
+  ],
+];
+
 /* ── Schema registry ──────────────────────────────────────── */
 
-export function getSchema(service: string): ServiceSchema {
-  const s = service.toLowerCase();
+export function getSchema(input: Lead | string): ServiceSchema {
+  const service = typeof input === 'string' ? input : (input?.service || '');
+  const source  = typeof input === 'string' ? ''      : (input?.source  || '');
+  const s   = service.toLowerCase();
+  const src = source.toLowerCase();
+
+  // Contact-style leads ignore the service-specific schema and use a minimal
+  // layout that only shows what the small contact form actually collected.
+  if (src === 'contact us')   return CONTACT_US;
+  if (src === 'blog contact') return BLOG_CONTACT;
+
+  if (s.includes('affidavit') || s.includes('annexure')) return AFFIDAVIT;
   if (s.includes('visa'))                       return TOURIST_VISA;
   if (s.includes('passport'))                   return PASSPORT;
   if (s.includes('pan card') || s.includes('pancard')) return PAN_CARD;

@@ -73,7 +73,7 @@ export default function BlogsPage() {
           <thead className="bg-gray-50/50">
             <tr>
               {['Sl.No', 'Title', 'Image', 'Description (Preview)', 'Status', 'Actions'].map((h) => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                <th key={h} className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                   {h}
                 </th>
               ))}

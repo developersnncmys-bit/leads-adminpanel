@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Search, Download, ChevronUp, ChevronDown, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
+import { SERVICES } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { useAddLead } from '@/context/AddLeadContext';
 import PaymentBadge from './PaymentBadge';
@@ -24,6 +25,7 @@ export default function LeadTable({ leads }: Props) {
   const [sortKey, setSortKey] = useState<keyof Lead>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
+  const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
@@ -78,12 +80,16 @@ export default function LeadTable({ leads }: Props) {
       const matchPayment =
       paymentFilter === 'all' || l.paymentStatus === paymentFilter;
 
+      const matchService =
+      serviceFilter === 'all' || l.service === serviceFilter;
+
       const matchAssigned =
       assignedFilter === 'all' || l.assignedTo === assignedFilter;
 
       return (
       matchSearch &&
       matchPayment &&
+      matchService &&
       matchAssigned
       );
     })
@@ -103,7 +109,7 @@ export default function LeadTable({ leads }: Props) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [search, paymentFilter, assignedFilter]);
+  useEffect(() => { setPage(1); }, [search, paymentFilter, serviceFilter, assignedFilter]);
   useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
   const downloadCSV = () => {
@@ -129,7 +135,7 @@ export default function LeadTable({ leads }: Props) {
   const Th = ({ col, label, className = '' }: { col: keyof Lead; label: string; className?: string }) => (
     <th
       onClick={() => handleSort(col)}
-      className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 transition-colors whitespace-nowrap ${className}`}
+      className={`px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 transition-colors whitespace-nowrap ${className}`}
     >
       <div className="flex items-center gap-1">
         {label}
@@ -153,6 +159,18 @@ export default function LeadTable({ leads }: Props) {
           />
         </div>
       <div className="flex flex-wrap items-center gap-2">
+
+    {/* SERVICE FILTER */}
+    <select
+    value={serviceFilter}
+    onChange={(e) => setServiceFilter(e.target.value)}
+    className="px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+    <option value="all">All Services</option>
+    {SERVICES.map((s) => (
+      <option key={s} value={s}>{s}</option>
+    ))}
+    </select>
 
     {/* ASSIGNED TO FILTER */}
     <select
@@ -242,8 +260,8 @@ export default function LeadTable({ leads }: Props) {
               <Th col="district" label="District" />
               <Th col="service" label="Service" />
               <Th col="amount" label="Amount" />
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Payment</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">Assigned To</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned To</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
