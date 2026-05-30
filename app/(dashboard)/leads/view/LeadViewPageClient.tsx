@@ -230,9 +230,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
       action: async () => {
         await updateLead(lead.id, { status: newStatus });
         setConfirm(null);
-        // Send the user to the matching pipeline's table page so they see
-        // the lead in its new bucket alongside the others.
-        router.push(`/leads/${newStatus}`);
+        // Full navigation to the matching pipeline page — forces a fresh
+        // load so the table reflects the latest backend state.
+        window.location.href = `/leads/${newStatus}`;
       },
     });
   };
@@ -242,7 +242,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
     const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
     await updateLead(lead.id, { status, followUpDate: date });
-    router.push(`/leads/${status}`);
+    window.location.href = `/leads/${status}`;
   };
 
   const handleDelete = () => {
