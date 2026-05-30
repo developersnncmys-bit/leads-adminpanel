@@ -66,7 +66,7 @@ const PIPELINE_TABS = [
 ];
 
 export default function DashboardPage() {
-  const { leads } = useAddLead();
+  const { leads, openModal } = useAddLead();
   const user = useAuthUser();
 
   const stats = {
@@ -116,13 +116,22 @@ export default function DashboardPage() {
     <div className="space-y-6">
 
       {/* HEADER */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          {greeting ? `${greeting}, ${user.name.split(' ')[0]}! 👋` : ''}
-        </h1>
-        <p className="text-sm text-gray-400 mt-1">
-          Here's what's happening with your leads today.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {greeting ? `${greeting}, ${user.name.split(' ')[0]}! 👋` : ''}
+          </h1>
+          <p className="text-sm text-gray-400 mt-1">
+            Here's what's happening with your leads today.
+          </p>
+        </div>
+        <button
+          onClick={openModal}
+          className="hidden sm:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
+        >
+          <UserPlus className="w-4 h-4" />
+          Add Lead
+        </button>
       </div>
 
       {/* KPI CARDS */}
@@ -158,128 +167,80 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* CHART SECTION */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
-        {/* LEADS OVERVIEW */}
-        <div className="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-
-          <div className="flex items-start justify-between mb-5">
-
-            <div>
-              <h2 className="font-bold text-gray-900 text-base">
-                Leads Overview
-              </h2>
-
-              <p className="text-xs text-gray-400 mt-1">
-                Monthly lead activity this year
-              </p>
-            </div>
-          </div>
-
-          <BarChart data={monthlyData} />
+      {/* LEADS OVERVIEW — full width */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div className="mb-5">
+          <h2 className="font-bold text-gray-900 text-base">Leads Overview</h2>
+          <p className="text-xs text-gray-400 mt-1">Monthly lead activity this year</p>
         </div>
-
-        {/* PIPELINE DISTRIBUTION */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-
-          <div className="mb-5">
-
-            <h2 className="font-bold text-gray-900">
-              Lead Distribution
-            </h2>
-
-            <p className="text-xs text-gray-400 mt-1">
-              Current lead pipeline distribution
-            </p>
-
-          </div>
-
-          <DonutChart data={donutData} />
-
-          <div className="mt-5 pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
-
-            <span className="text-gray-500">
-              Conversion rate
-            </span>
-
-            <span className="font-bold text-emerald-600">
-              {((stats.converted / total) * 100).toFixed(1)}%
-            </span>
-
-          </div>
-        </div>
+        <BarChart data={monthlyData} />
       </div>
 
-      {/* CATEGORY DISTRIBUTION */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      {/* CATEGORY + LEAD DISTRIBUTION — same row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
+        {/* CATEGORY DISTRIBUTION */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center gap-2 mb-5">
-
             <FileText className="w-5 h-5 text-blue-600" />
-
             <div>
-              <h2 className="font-bold text-gray-900">
-                Category Distribution
-              </h2>
-
-              <p className="text-xs text-gray-400">
-                Overall active leads by services
-              </p>
+              <h2 className="font-bold text-gray-900">Category Distribution</h2>
+              <p className="text-xs text-gray-400">Overall active leads by services</p>
             </div>
-
           </div>
 
-          {/* CATEGORY LIST */}
           <div className="space-y-5 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
-
             {categoryData
               .sort((a, b) => b.count - a.count)
               .map((item, index, arr) => {
-
                 const max = arr[0].count;
+                const pct = total > 0 ? ((item.count / total) * 100).toFixed(1) : '0.0';
 
                 return (
-                  <div
-                    key={item.name}
-                    className="group cursor-pointer category-card"
-                  >
-
-                    {/* TOP ROW */}
+                  <div key={item.name} className="group cursor-pointer category-card">
                     <div className="flex items-center justify-between mb-2">
-
                       <div className="flex items-center gap-2">
-
                         <div className="w-2 h-2 rounded-full bg-blue-600" />
-
                         <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
                           {item.name}
                         </span>
-
                       </div>
-
-                      <span className="text-sm font-bold text-gray-900">
-                        {item.count}
-                      </span>
-
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-sm font-bold text-gray-900">{item.count}</span>
+                        <span className="text-xs text-gray-400 tabular-nums">({pct}%)</span>
+                      </div>
                     </div>
 
-                    {/* PROGRESS BAR */}
                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-
                       <div
                         className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
-                        style={{
-                          width: `${(item.count / max) * 100}%`,
-                        }}
+                        style={{ width: `${(item.count / max) * 100}%` }}
                       />
-
                     </div>
                   </div>
                 );
               })}
           </div>
         </div>
+
+        {/* LEAD DISTRIBUTION */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="mb-5">
+            <h2 className="font-bold text-gray-900">Lead Distribution</h2>
+            <p className="text-xs text-gray-400 mt-1">Current lead pipeline distribution</p>
+          </div>
+
+          <DonutChart data={donutData} />
+
+          <div className="mt-5 pt-4 border-t border-gray-50 flex items-center justify-between text-xs">
+            <span className="text-gray-500">Conversion rate</span>
+            <span className="font-bold text-emerald-600">
+              {total > 0 ? ((stats.converted / total) * 100).toFixed(1) : '0.0'}%
+            </span>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }

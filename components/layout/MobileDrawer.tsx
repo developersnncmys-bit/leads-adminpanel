@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, UserPlus, AlertCircle, CalendarCheck,
+  LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
   UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
@@ -76,6 +76,7 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
           <NavLink href="/" label="Dashboard" icon={LayoutDashboard} />
+          <NavLink href="/leads/add" label="Add Lead" icon={PlusCircle} />
 
           <div className="pt-4 pb-1.5 px-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Pipeline</p>

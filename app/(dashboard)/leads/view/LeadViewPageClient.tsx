@@ -155,7 +155,6 @@ function FollowUpModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            min={new Date().toISOString().split('T')[0]}
             className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
           />
         </div>

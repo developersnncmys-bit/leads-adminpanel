@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, UserPlus, AlertCircle,
+  LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
   Settings, Zap,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
+import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
   { href: '/leads/new',       label: 'New Leads',         icon: UserPlus,      key: 'new',       dot: '#3b82f6' },
@@ -26,6 +27,7 @@ const ADMIN_NAV = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { openModal } = useAddLead();
   const user = useAuthUser();
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -50,6 +52,13 @@ export default function Sidebar() {
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
 
         <NavItem href="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/') && pathname === '/'} />
+        <button
+          onClick={openModal}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all"
+        >
+          <PlusCircle className="w-4 h-4 text-gray-400" />
+          Add Lead
+        </button>
 
         <SectionLabel>Pipeline</SectionLabel>
         {LEAD_NAV.map(({ href, label, icon, dot }) => (
