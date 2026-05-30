@@ -11,6 +11,7 @@ import { MOCK_USERS } from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
 import { LeadStatus } from '@/lib/types';
 import { useAddLead } from '@/context/AddLeadContext';
+import { useAuthUser } from '@/lib/useAuthUser';
 import { getSchema, resolveField, MANUAL_SCHEMA } from '@/lib/formSchemas';
 import { formatDate } from '@/lib/format';
 
@@ -198,6 +199,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onCon
 function WebsiteLeadView({ leadId }: { leadId: string }) {
   const router = useRouter();
   const { leads, updateLead, deleteLead, addNote } = useAddLead();
+  const auth = useAuthUser();
   const lead = leads.find((l) => l.id === leadId);
   if (!lead) return notFound();
 
@@ -219,9 +221,15 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   }, []);
 
   const addComment = (text: string) => {
+    // Author = the lead's assigned user when set; otherwise the currently
+    // logged-in account, so a comment is always attributable to a real user.
+    const author =
+      lead.assignedTo && lead.assignedTo !== 'Unassigned'
+        ? lead.assignedTo
+        : auth.name || 'Admin';
     // Goes through the dedicated POST /api/leads/:id/notes endpoint, which
     // $pushes one note so the timestamps of older notes stay intact.
-    addNote(lead.id, text, 'Deepak Kumar');
+    addNote(lead.id, text, author);
   };
 
   const changeStatus = (newStatus: LeadStatus, label: string) => {
@@ -362,15 +370,21 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all">
             <MessageSquare className="w-3.5 h-3.5" /> Comment
           </button>
-          <button onClick={() => setShowFollowUp(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 hover:bg-amber-100 shadow-sm transition-all">
-            <Calendar className="w-3.5 h-3.5" /> Follow Up
-          </button>
+          {/* Follow Up — hidden on dead & converted (terminal states) */}
+          {lead.status !== 'dead' && lead.status !== 'converted' && (
+            <button onClick={() => setShowFollowUp(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 hover:bg-amber-100 shadow-sm transition-all">
+              <Calendar className="w-3.5 h-3.5" /> Follow Up
+            </button>
+          )}
 
           <div className="w-px h-5 bg-gray-200" />
 
-          {/* Status changers — hidden for the lead's current status */}
-          {lead.status !== 'inprocess' && (
+          {/* Status changers — visibility rules:
+              - Converted: terminal; no status-change buttons at all
+              - Dead: only "Converted" is shown so the lead can be resurrected
+              - All others: the standard set (with each button hiding its own current status) */}
+          {lead.status !== 'inprocess' && lead.status !== 'dead' && lead.status !== 'converted' && (
             <button onClick={() => changeStatus('inprocess', 'In Process')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100">
               In Process
@@ -382,7 +396,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               Converted
             </button>
           )}
-          {lead.status !== 'dead' && (
+          {lead.status !== 'dead' && lead.status !== 'converted' && (
             <button onClick={() => changeStatus('dead', 'Dead')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200">
               Dead

@@ -30,6 +30,7 @@ export default function LeadTable({ leads }: Props) {
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   // Pagination is mirrored to `?page=N` so a browser-back from a lead detail
   // page (or a manual refresh) lands the user on the same page they were on.
   const initialPage = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -80,9 +81,11 @@ export default function LeadTable({ leads }: Props) {
       setSelected(prev => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
     }
   };
-  const deleteSelected = () => {
+  const deleteSelected = () => setConfirmDeleteOpen(true);
+  const confirmDeleteSelected = () => {
     selected.forEach(id => deleteLead(id));
     setSelected(new Set());
+    setConfirmDeleteOpen(false);
   };
 
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
@@ -398,6 +401,33 @@ export default function LeadTable({ leads }: Props) {
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
       />
+
+      {confirmDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setConfirmDeleteOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+              <Trash2 className="w-5 h-5 text-red-500" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900 mb-1">Delete {selected.size} lead{selected.size > 1 ? 's' : ''}?</h3>
+            <p className="text-sm text-gray-500 mb-6">This action cannot be undone.</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => setConfirmDeleteOpen(false)}
+                className="px-5 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteSelected}
+                className="px-5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
