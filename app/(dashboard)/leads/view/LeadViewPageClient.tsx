@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { notFound, useRouter, useParams } from 'next/navigation';
+import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Phone, Mail, MessageSquare, Send, X, Calendar,
@@ -659,10 +659,11 @@ function ManualLeadView({ leadId }: { leadId: string }) {
 
 /* ─── Entry point ───────────────────────────────────────────────── */
 export default function LeadViewPageClient() {
-  // Read id from the URL at runtime so static-export rewrites work:
-  // on Netlify we rewrite any /leads/view/<unknown-id> to the prerendered
-  // shell, and this hook still resolves the actual URL's id post-hydration.
-  const { id } = useParams<{ id: string }>();
+  // Read id from the URL's ?id query at runtime. Using a query string keeps
+  // the route fully static (one HTML file at /leads/view) so any lead ID
+  // works on any static host — no host-specific rewrites needed.
+  const sp = useSearchParams();
+  const id = sp.get('id') ?? '';
   const { leads, loading } = useAddLead();
   const lead = leads.find((l) => l.id === id);
 

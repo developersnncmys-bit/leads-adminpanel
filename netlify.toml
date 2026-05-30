@@ -4,17 +4,3 @@
 
 [build.environment]
   NODE_VERSION = "20"
-
-# Static export pre-renders only the mock IDs known at build time. For any
-# other lead/blog ID at runtime, rewrite to a prerendered shell (URL stays;
-# the client component reads the real id from the URL via useParams).
-
-[[redirects]]
-  from = "/leads/view/:id"
-  to = "/leads/view/l001.html"
-  status = 200
-
-[[redirects]]
-  from = "/blogs/:id/edit"
-  to = "/blogs/b1/edit.html"
-  status = 200

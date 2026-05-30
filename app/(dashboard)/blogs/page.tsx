@@ -141,7 +141,7 @@ export default function BlogsPage() {
                 {blog.status}
               </span>
               <div className="flex gap-2">
-                <Link href={`/blogs/${blog.id}/edit`} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
+                <Link href={`/blogs/edit?id=${blog.id}`} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg">
                   <Edit3 className="w-4 h-4" />
                 </Link>
                 <button onClick={() => handleDelete(blog.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg">

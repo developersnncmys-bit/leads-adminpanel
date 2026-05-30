@@ -257,7 +257,7 @@ export default function LeadTable({ leads }: Props) {
               pageItems.map((lead, index) => (
                <tr
                key={lead.id}
-               onClick={() => router.push(`/leads/view/${lead.id}`)}
+               onClick={() => router.push(`/leads/view?id=${lead.id}`)}
                className={`hover:bg-blue-50/30 transition-colors group cursor-pointer ${selected.has(lead.id) ? 'bg-blue-50/50' : ''}`}
                >
                   <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
@@ -316,7 +316,7 @@ export default function LeadTable({ leads }: Props) {
           <div className="px-4 py-12 text-center text-gray-400 text-sm">No leads found.</div>
         ) : (
           pageItems.map((lead) => (
-            <Link key={lead.id} href={`/leads/view/${lead.id}`} className="block px-4 py-4 hover:bg-gray-50 transition-colors">
+            <Link key={lead.id} href={`/leads/view?id=${lead.id}`} className="block px-4 py-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">

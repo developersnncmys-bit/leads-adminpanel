@@ -73,7 +73,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
         type: 'overdue' as const,
         message: `${l.name}'s follow-up is overdue`,
         sub: l.service,
-        href: `/leads/view/${l.id}`,
+        href: `/leads/view?id=${l.id}`,
       })),
     ...leads
       .filter((l) => l.status === 'today')
@@ -82,7 +82,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
         type: 'today' as const,
         message: `Follow up with ${l.name} today`,
         sub: l.service,
-        href: `/leads/view/${l.id}`,
+        href: `/leads/view?id=${l.id}`,
       })),
   ];
 
@@ -110,7 +110,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               {results.map((lead) => (
                 <Link
                   key={lead.id}
-                  href={`/leads/view/${lead.id}`}
+                  href={`/leads/view?id=${lead.id}`}
                   onClick={() => { setSearch(''); setShowResults(false); }}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                 >
