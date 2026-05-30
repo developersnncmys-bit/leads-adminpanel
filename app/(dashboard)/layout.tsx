@@ -11,12 +11,14 @@ import AddBlogModal from '@/components/blogs/AddBlogModal';
 import { AddBlogProvider } from '@/context/AddBlogContext';
 import EditBlogModal from '@/components/blogs/EditBlogModal';
 import { EditBlogProvider } from '@/context/EditBlogContext';
+import { BlogProvider } from '@/context/BlogContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
     <AddLeadProvider>
+      <BlogProvider>
       <AddBlogProvider>
         <EditBlogProvider>
           <div className="h-full flex bg-slate-50/80">
@@ -37,6 +39,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </EditBlogProvider>
       </AddBlogProvider>
+      </BlogProvider>
     </AddLeadProvider>
   );
 }

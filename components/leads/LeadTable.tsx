@@ -6,28 +6,27 @@ import { useRouter } from 'next/navigation';
 import { Search, Download, ChevronUp, ChevronDown, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
-import { SERVICES } from '@/lib/constants';
+import { formatDate } from '@/lib/format';
 import { useAddLead } from '@/context/AddLeadContext';
-import StatusBadge from './StatusBadge';
 import PaymentBadge from './PaymentBadge';
+import Pagination from '../Pagination';
+
+const PAGE_SIZE = 10;
 
 interface Props {
   leads: Lead[];
-  onStatusChange?: (leadId: string, newStatus: string) => void;
-  onAssignChange?: (leadId: string, employee: string) => void;
 }
 
-export default function LeadTable({ leads, onStatusChange, onAssignChange }: Props) {
+export default function LeadTable({ leads }: Props) {
   const router = useRouter();
-  const { deleteLead } = useAddLead();
+  const { deleteLead, updateLead } = useAddLead();
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<keyof Lead>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [paymentFilter, setPaymentFilter] = useState<string>('all');
-  const [serviceFilter, setServiceFilter] = useState<string>('all');
-  const [districtFilter, setDistrictFilter] = useState<string>('all');
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [page, setPage] = useState(1);
   const [employees, setEmployees] = useState<string[]>(() =>
     MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
   );
@@ -60,7 +59,6 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
     setSelected(new Set());
   };
 
-  const districts = [...new Set(leads.map((l) => l.district))];
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
 
   const handleSort = (key: keyof Lead) => {
@@ -80,20 +78,12 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
       const matchPayment =
       paymentFilter === 'all' || l.paymentStatus === paymentFilter;
 
-      const matchService =
-      serviceFilter === 'all' || l.service === serviceFilter;
-
-      const matchDistrict =
-      districtFilter === 'all' || l.district === districtFilter;
-
       const matchAssigned =
       assignedFilter === 'all' || l.assignedTo === assignedFilter;
 
       return (
       matchSearch &&
       matchPayment &&
-      matchService &&
-      matchDistrict &&
       matchAssigned
       );
     })
@@ -110,10 +100,16 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
       return sortDir === 'asc' ? cmp : -cmp;
     });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search, paymentFilter, assignedFilter]);
+  useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
+
   const downloadCSV = () => {
-    const headers = ['Sl.No', 'Date', 'Name', 'Mobile', 'District', 'Service', 'Amount', 'Payment', 'Assigned To'];
+    const headers = ['Sl.No', 'Date', 'Time', 'Name', 'Mobile', 'District', 'Service', 'Amount', 'Payment', 'Assigned To'];
     const rows = filtered.map((l, i) => [
-      i + 1, l.date, l.name, l.mobileNumber, l.district, l.service,
+      i + 1, l.date, l.time || '', l.name, l.mobileNumber, l.district, l.service,
       l.amount, l.paymentStatus, l.assignedTo,
     ]);
     const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
@@ -157,36 +153,6 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
           />
         </div>
       <div className="flex flex-wrap items-center gap-2">
-
-        {/* SERVICE FILTER */}
-       <select
-       value={serviceFilter}
-       onChange={(e) => setServiceFilter(e.target.value)}
-       className="px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-       >
-      <option value="all">All Services</option>
-
-     {SERVICES.map((service) => (
-      <option key={service} value={service}>
-        {service}
-      </option>
-      ))}
-      </select>
-
-     {/* DISTRICT FILTER */}
-     <select
-     value={districtFilter}
-     onChange={(e) => setDistrictFilter(e.target.value)}
-     className="px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-     >
-    <option value="all">All Districts</option>
-
-    {districts.map((district) => (
-      <option key={district} value={district}>
-        {district}
-      </option>
-    ))}
-    </select>
 
     {/* ASSIGNED TO FILTER */}
     <select
@@ -270,6 +236,7 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
               </th>
               <Th col="slNo" label="Sl.No" className="w-14" />
               <Th col="date" label="Date" />
+              <Th col="time" label="Time" />
               <Th col="name" label="Name" />
               <Th col="mobileNumber" label="Mobile" />
               <Th col="district" label="District" />
@@ -282,12 +249,12 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
           <tbody className="divide-y divide-gray-50">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={11} className="px-4 py-12 text-center text-gray-400 text-sm">
                   No leads found matching your search.
                 </td>
               </tr>
             ) : (
-              filtered.map((lead, index) => (
+              pageItems.map((lead, index) => (
                <tr
                key={lead.id}
                onClick={() => router.push(`/leads/view/${lead.id}`)}
@@ -302,7 +269,8 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
                     />
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-500 font-medium">{index + 1}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{lead.date}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{formatDate(lead.date)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{lead.time || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -324,10 +292,11 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
                   </td>
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <select
-                      defaultValue={lead.assignedTo}
-                      onChange={(e) => onAssignChange?.(lead.id, e.target.value)}
+                      value={lead.assignedTo || 'Unassigned'}
+                      onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
                       className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer"
                     >
+                      <option value="Unassigned">Select assigned user</option>
                       {employees.map((emp) => (
                         <option key={emp} value={emp}>{emp}</option>
                       ))}
@@ -346,7 +315,7 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
         {filtered.length === 0 ? (
           <div className="px-4 py-12 text-center text-gray-400 text-sm">No leads found.</div>
         ) : (
-          filtered.map((lead) => (
+          pageItems.map((lead) => (
             <Link key={lead.id} href={`/leads/view/${lead.id}`} className="block px-4 py-4 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -366,11 +335,19 @@ export default function LeadTable({ leads, onStatusChange, onAssignChange }: Pro
                 <span><span className="font-medium text-gray-700">Amount:</span> ₹{lead.amount.toLocaleString('en-IN')}</span>
                 <span><span className="font-medium text-gray-700">Assigned:</span> {lead.assignedTo}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-2">{lead.date}</p>
+              <p className="text-xs text-gray-400 mt-2">{formatDate(lead.date)}{lead.time ? ` · ${lead.time}` : ''}</p>
             </Link>
           ))
         )}
       </div>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        total={filtered.length}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+      />
     </div>
   );
 }

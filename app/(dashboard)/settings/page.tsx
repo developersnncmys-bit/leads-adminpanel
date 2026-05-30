@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users, UserPlus, Edit3, Trash2,
   CheckCircle, XCircle, Search, X, Eye, EyeOff, Shield, UserCheck,
 } from 'lucide-react';
-import { MOCK_USERS } from '@/lib/mockData';
 import { User, UserRole } from '@/lib/types';
+import * as api from '@/lib/api';
+import Pagination from '@/components/Pagination';
+
+const PAGE_SIZE = 10;
 
 interface UserForm {
   name: string;
@@ -23,40 +26,29 @@ const INITIAL_FORM: UserForm = { name: '', email: '', phone: '', role: 'employee
 
 export default function SettingsPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const initialized = useRef(false);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState<UserForm>(INITIAL_FORM);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [saveError, setSaveError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [page, setPage] = useState(1);
 
-  useEffect(() => {
+  const load = async () => {
     try {
-      const stored = localStorage.getItem('crm-users');
-      if (stored) {
-        const parsed: User[] = JSON.parse(stored);
-        const isEmpty = !Array.isArray(parsed) || parsed.length === 0;
-        const isStale = !isEmpty && !parsed[0].username;
-        if (isEmpty || isStale) {
-          setUsers(MOCK_USERS);
-          localStorage.setItem('crm-users', JSON.stringify(MOCK_USERS));
-        } else {
-          setUsers(parsed);
-        }
-      } else {
-        setUsers(MOCK_USERS);
-      }
-    } catch {
-      setUsers(MOCK_USERS);
+      setUsers(await api.listUsers());
+    } catch (err) {
+      console.error('Failed to load users:', err);
     }
-    initialized.current = true;
-  }, []);
+  };
 
+  useEffect(() => { load(); }, []);
+
+  // mirror to localStorage so the "assign to" employee dropdowns on the lead
+  // pages stay populated without each needing its own fetch
   useEffect(() => {
-    if (initialized.current) {
-      localStorage.setItem('crm-users', JSON.stringify(users));
-    }
+    if (users.length) localStorage.setItem('crm-users', JSON.stringify(users));
   }, [users]);
 
   const set = (key: keyof UserForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
@@ -66,6 +58,7 @@ export default function SettingsPage() {
     setEditingUser(null);
     setForm(INITIAL_FORM);
     setErrors({});
+    setSaveError('');
     setShowPassword(false);
     setShowModal(true);
   };
@@ -74,6 +67,7 @@ export default function SettingsPage() {
     setEditingUser(user);
     setForm({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, username: user.username, password: '' });
     setErrors({});
+    setSaveError('');
     setShowPassword(false);
     setShowModal(true);
   };
@@ -100,29 +94,53 @@ export default function SettingsPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
-    if (editingUser) {
-      setUsers((us) => us.map((u) => u.id === editingUser.id ? {
-        ...u, name: form.name, email: form.email, phone: form.phone,
-        role: form.role, username: form.username.trim(),
-        ...(form.password ? { password: form.password } : {}),
-      } : u));
-    } else {
-      setUsers((us) => [...us, {
-        id: Date.now().toString(),
-        slNo: us.length + 1,
-        name: form.name, email: form.email, phone: form.phone,
-        role: form.role, username: form.username.trim(),
-        password: form.password, status: 'active',
-        createdAt: new Date().toISOString().split('T')[0],
-      }]);
+    setSaveError('');
+    const payload: Partial<User> = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      role: form.role,
+      username: form.username.trim(),
+      ...(form.password ? { password: form.password } : {}),
+    };
+    try {
+      if (editingUser) {
+        const updated = await api.updateUser(editingUser.id, payload);
+        setUsers((us) => us.map((u) => (u.id === editingUser.id ? updated : u)));
+      } else {
+        const created = await api.createUser(payload);
+        setUsers((us) => [...us, created]);
+      }
+      setShowModal(false);
+    } catch (err) {
+      setSaveError((err as Error).message || 'Could not save user. Please try again.');
     }
-    setShowModal(false);
   };
 
-  const toggleStatus = (id: string) =>
-    setUsers((us) => us.map((u) => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
+  const toggleStatus = async (id: string) => {
+    const u = users.find((x) => x.id === id);
+    if (!u) return;
+    const status = u.status === 'active' ? 'inactive' : 'active';
+    setUsers((us) => us.map((x) => (x.id === id ? { ...x, status } : x)));
+    try {
+      await api.updateUser(id, { status });
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      load();
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setUsers((us) => us.filter((u) => u.id !== id));
+    try {
+      await api.deleteUser(id);
+    } catch (err) {
+      console.error('Failed to delete user:', err);
+      load();
+    }
+  };
 
   const filtered = users.filter((u) =>
     !search ||
@@ -130,6 +148,12 @@ export default function SettingsPage() {
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     u.username.toLowerCase().includes(search.toLowerCase())
   );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
   const inp = (err?: string) =>
     `w-full px-3.5 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all text-gray-900 ${err ? 'border-red-300' : 'border-gray-200'}`;
@@ -220,7 +244,7 @@ export default function SettingsPage() {
                 <tr>
                   <td colSpan={7} className="px-5 py-10 text-center text-sm text-gray-400">No users found.</td>
                 </tr>
-              ) : filtered.map((user) => (
+              ) : pageItems.map((user) => (
                 <tr key={user.id} className="hover:bg-blue-50/20 transition-colors">
 
                   <td className="px-5 py-4 text-sm text-gray-400 font-medium w-10">{user.slNo}</td>
@@ -282,7 +306,7 @@ export default function SettingsPage() {
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => setUsers((us) => us.filter((u) => u.id !== user.id))}
+                        onClick={() => handleDelete(user.id)}
                         className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete"
                       >
@@ -301,7 +325,7 @@ export default function SettingsPage() {
         <div className="sm:hidden divide-y divide-gray-50">
           {filtered.length === 0 ? (
             <p className="px-5 py-10 text-center text-sm text-gray-400">No users found.</p>
-          ) : filtered.map((user) => (
+          ) : pageItems.map((user) => (
             <div key={user.id} className="px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -320,7 +344,7 @@ export default function SettingsPage() {
                   <button onClick={() => openEdit(user)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg">
                     <Edit3 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setUsers((us) => us.filter((u) => u.id !== user.id))} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                  <button onClick={() => handleDelete(user.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -339,6 +363,14 @@ export default function SettingsPage() {
             </div>
           ))}
         </div>
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       </div>
 
       {/* Add / Edit modal */}
@@ -372,6 +404,12 @@ export default function SettingsPage() {
 
             {/* Modal body */}
             <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+              {saveError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
+                  {saveError}
+                </div>
+              )}
 
               {/* Avatar preview */}
               {form.name && (

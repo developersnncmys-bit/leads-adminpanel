@@ -2,17 +2,9 @@
 
 import { useState } from 'react';
 
-// Pre-defined mock lead counts for all 12 months.
-// When backend is connected, replace this with real API data.
-const MOCK_MONTHLY_VALUES = [28, 42, 35, 51, 36, 48, 62, 45, 53, 38, 57, 44];
-const ALL_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-// Auto-slice up to current month — updates itself when the month changes
-const currentMonthIndex = new Date().getMonth(); // 0 = Jan, 11 = Dec
-const DATA = ALL_MONTHS.slice(0, currentMonthIndex + 1).map((label, i) => ({
-  label,
-  value: MOCK_MONTHLY_VALUES[i],
-}));
+interface BarChartProps {
+  data: { label: string; value: number }[];
+}
 
 const W = 480;
 const H = 140;
@@ -22,12 +14,13 @@ const PT = 8;
 const PB = 24;
 const CHART_H = H - PT - PB;
 const CHART_W = W - PL - PR;
-const SLOT_W = CHART_W / DATA.length;
-const BAR_W = SLOT_W * 0.42;
 
-export default function BarChart() {
+export default function BarChart({ data }: BarChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const max = Math.max(...DATA.map((d) => d.value));
+  const year = new Date().getFullYear();
+  const max = Math.max(...data.map((d) => d.value)) || 1;
+  const SLOT_W = CHART_W / data.length;
+  const BAR_W = SLOT_W * 0.42;
 
   // Since we use preserveAspectRatio="none", SVG fills container exactly.
   // So SVG x% === container x% — safe to use for HTML tooltip positioning.
@@ -51,13 +44,13 @@ export default function BarChart() {
           className="absolute z-50 pointer-events-none"
           style={{
             left: `${tooltipLeftPct(hovered)}%`,
-            top: `calc(${tooltipTopPct(DATA[hovered].value) * (160 / H)}% + 52px)`,
+            top: `calc(${tooltipTopPct(data[hovered].value) * (160 / H)}% + 52px)`,
             transform: 'translate(-50%, -110%)',
           }}
         >
           <div className="bg-gray-900 rounded-xl px-3 py-2 shadow-xl text-center whitespace-nowrap">
-            <p className="text-[10px] text-white/50 font-medium">{DATA[hovered].label} 2026</p>
-            <p className="text-sm font-bold text-white leading-tight">{DATA[hovered].value} leads</p>
+            <p className="text-[10px] text-white/50 font-medium">{data[hovered].label} {year}</p>
+            <p className="text-sm font-bold text-white leading-tight">{data[hovered].value} leads</p>
           </div>
           {/* Arrow */}
           <div className="flex justify-center">
@@ -96,7 +89,7 @@ export default function BarChart() {
           );
         })}
 
-        {DATA.map(({ label, value }, i) => {
+        {data.map(({ label, value }, i) => {
           const barH = (value / max) * CHART_H;
           const x = PL + i * SLOT_W + (SLOT_W - BAR_W) / 2;
           const y = PT + CHART_H - barH;

@@ -1,13 +1,13 @@
 'use client';
 
-import { use, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, CheckCircle, Bold, Italic, List, Link2, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import { MOCK_BLOGS } from '@/lib/mockData';
 
-export default function EditBlogPageClient({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function EditBlogPageClient() {
+  const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const blog = MOCK_BLOGS.find((b) => b.id === id);
 

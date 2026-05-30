@@ -76,6 +76,11 @@ export interface Blog {
   description: string;
   createdAt: string;
   status: 'published' | 'draft';
+  // website-facing fields
+  category?: string;
+  excerpt?: string;
+  slug?: string;
+  readTime?: string;
 }
 
 export interface AuthUser {

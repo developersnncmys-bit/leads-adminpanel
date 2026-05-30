@@ -5,10 +5,9 @@ import { notFound } from 'next/navigation';
 import { STATUS_CONFIG } from '@/lib/constants';
 import { LeadStatus } from '@/lib/types';
 import LeadTable from '@/components/leads/LeadTable';
-import Link from 'next/link';
 import {
   UserPlus, AlertCircle, CalendarCheck, UserCheck,
-  Clock, CheckCircle, XCircle, ArrowUpRight,
+  Clock, CheckCircle, XCircle,
 } from 'lucide-react';
 import { useAddLead } from '@/context/AddLeadContext';
 
@@ -30,13 +29,6 @@ const STATUS_META: Record<LeadStatus, {
   dead:      { icon: XCircle,       gradient: 'from-gray-400 to-gray-500',      lightBg: 'bg-gray-100',   textColor: 'text-gray-500',    description: 'Leads that did not convert' },
 };
 
-const QUICK_CARDS: { key: LeadStatus; label: string; color: string }[] = [
-  { key: 'new',       label: 'New Leads',         color: 'from-blue-500 to-blue-600' },
-  { key: 'today',     label: "Today's Follow-up", color: 'from-teal-500 to-teal-600' },
-  { key: 'followup',  label: 'Follow-up',          color: 'from-amber-400 to-amber-500' },
-  { key: 'inprocess', label: 'In Process',         color: 'from-violet-500 to-violet-600' },
-];
-
 export default function LeadStatusPageClient({ params }: { params: Promise<{ status: string }> }) {
   const { status } = use(params);
   const { openModal, leads: allLeads } = useAddLead();
@@ -44,12 +36,6 @@ export default function LeadStatusPageClient({ params }: { params: Promise<{ sta
 
   const s = status as LeadStatus;
   const leads = allLeads.filter((lead) => lead.status === s);
-  const stats = {
-    new:       allLeads.filter((l) => l.status === 'new').length,
-    today:     allLeads.filter((l) => l.status === 'today').length,
-    followup:  allLeads.filter((l) => l.status === 'followup').length,
-    inprocess: allLeads.filter((l) => l.status === 'inprocess').length,
-  };
   const cfg = STATUS_CONFIG[s];
   const meta = STATUS_META[s];
   const Icon = meta.icon;
@@ -73,36 +59,6 @@ export default function LeadStatusPageClient({ params }: { params: Promise<{ sta
           <UserPlus className="w-4 h-4" />
           Add Lead
         </button>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {QUICK_CARDS.map(({ key, label, color }) => {
-          const count = stats[key as keyof typeof stats] as number;
-          const isActive = key === s;
-          return (
-            <Link
-              key={key}
-              href={`/leads/${key}`}
-              className={`rounded-2xl p-4 transition-all hover:-translate-y-0.5 ${
-                isActive
-                  ? `bg-gradient-to-br ${color} shadow-md text-white`
-                  : 'bg-white border border-gray-100 shadow-sm hover:shadow-md'
-              }`}
-            >
-              <p className={`text-xs font-semibold mb-2 ${isActive ? 'text-white/80' : 'text-gray-500'}`}>{label}</p>
-              <div className="flex items-end justify-between">
-                <p className={`text-3xl font-bold ${isActive ? 'text-white' : 'text-gray-900'}`}>{count}</p>
-                <div className={`flex items-center gap-1 text-xs font-semibold ${isActive ? 'text-white/70' : 'text-emerald-500'}`}>
-                  <ArrowUpRight className="w-3.5 h-3.5" />
-                  <span>{isActive ? 'current' : 'view'}</span>
-                </div>
-              </div>
-              <p className={`text-xs mt-1.5 ${isActive ? 'text-white/60' : 'text-gray-400'}`}>
-                {isActive ? 'You are here' : 'Than last week'}
-              </p>
-            </Link>
-          );
-        })}
       </div>
 
       <div className="flex items-center gap-2">

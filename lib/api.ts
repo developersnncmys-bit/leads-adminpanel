@@ -1,0 +1,121 @@
+import type { Lead, User, Blog } from './types';
+
+// Base URL of the MMD backend. Override with NEXT_PUBLIC_API_URL in production.
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://mmdbackend.onrender.com';
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}/api${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    ...options,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data?.success === false) {
+    throw new Error(data?.message || `Request failed (${res.status})`);
+  }
+  return data as T;
+}
+
+export async function listLeads(): Promise<Lead[]> {
+  const data = await request<{ data: Lead[] }>('/leads');
+  return data.data;
+}
+
+export async function createLead(payload: Partial<Lead>): Promise<Lead> {
+  const data = await request<{ data: Lead }>('/leads', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return data.data;
+}
+
+export async function updateLead(id: string, updates: Partial<Lead>): Promise<Lead> {
+  const data = await request<{ data: Lead }>(`/leads/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  return data.data;
+}
+
+export async function deleteLead(id: string): Promise<void> {
+  await request(`/leads/${id}`, { method: 'DELETE' });
+}
+
+/* ── Users ─────────────────────────────────────────────── */
+
+export async function listUsers(): Promise<User[]> {
+  const data = await request<{ data: User[] }>('/users');
+  return data.data;
+}
+
+export async function createUser(payload: Partial<User>): Promise<User> {
+  const data = await request<{ data: User }>('/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return data.data;
+}
+
+export async function updateUser(id: string, updates: Partial<User>): Promise<User> {
+  const data = await request<{ data: User }>(`/users/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  return data.data;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await request(`/users/${id}`, { method: 'DELETE' });
+}
+
+export async function login(username: string, password: string): Promise<User> {
+  const data = await request<{ data: User }>('/users/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+  return data.data;
+}
+
+/* ── Blogs ─────────────────────────────────────────────── */
+// The backend stores the article body as `content`; the admin UI calls it
+// `description`. These helpers translate between the two shapes.
+
+type ApiBlog = Omit<Blog, 'description'> & { content?: string };
+
+function fromApiBlog(b: ApiBlog): Blog {
+  const { content, ...rest } = b;
+  return { ...(rest as Omit<Blog, 'description'>), description: content ?? '' };
+}
+
+function toApiBlog(b: Partial<Blog>): Record<string, unknown> {
+  const { description, ...rest } = b;
+  return {
+    ...rest,
+    ...(description !== undefined ? { content: description } : {}),
+  };
+}
+
+export async function listBlogs(): Promise<Blog[]> {
+  const data = await request<{ data: ApiBlog[] }>('/blogs');
+  return data.data.map(fromApiBlog);
+}
+
+export async function createBlog(payload: Partial<Blog>): Promise<Blog> {
+  const data = await request<{ data: ApiBlog }>('/blogs', {
+    method: 'POST',
+    body: JSON.stringify(toApiBlog(payload)),
+  });
+  return fromApiBlog(data.data);
+}
+
+export async function updateBlog(id: string, updates: Partial<Blog>): Promise<Blog> {
+  const data = await request<{ data: ApiBlog }>(`/blogs/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(toApiBlog(updates)),
+  });
+  return fromApiBlog(data.data);
+}
+
+export async function deleteBlog(id: string): Promise<void> {
+  await request(`/blogs/${id}`, { method: 'DELETE' });
+}

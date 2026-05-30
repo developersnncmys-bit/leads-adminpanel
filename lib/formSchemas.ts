@@ -1,4 +1,5 @@
 import type { Lead } from './types';
+import { formatDate } from './format';
 
 export interface FieldDef {
   label: string;
@@ -333,10 +334,99 @@ const LEASE_AGREEMENT: ServiceSchema = [
 ];
 
 /* ── Insurance ──────────────────────────────────────────── */
-// From screenshot: Date, Time, Order Id, Service, Source, Amount,
-// Status, Assigned User, Name, Address, State, District,
-// Pin Code, Email ID, Mobile Number
+// One schema per insurance type — each website form collects different fields,
+// so we render them all instead of a generic insurance layout.
 
+// Health Insurance: intent, gender, member1, member2, age, disease + contact
+const HEALTH_INSURANCE: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Intent',     key: 'intent',  source: 'formData' },
+    { label: 'Gender',     key: 'gender',  source: 'formData' },
+    { label: 'Insure For', key: 'member1', source: 'formData' },
+  ],
+  [
+    { label: 'Additional Member',    key: 'member2', source: 'formData' },
+    { label: 'Age Group',            key: 'age',     source: 'formData' },
+    { label: 'Pre-existing Disease', key: 'disease', source: 'formData' },
+  ],
+  [
+    { label: 'Address',  key: 'address'  },
+    { label: 'State',    key: 'state',    source: 'formData' },
+    { label: 'District', key: 'district' },
+  ],
+  [
+    { label: 'Pin Code',      key: 'pinCode',     source: 'formData' },
+    { label: 'Email ID',      key: 'email'        },
+    { label: 'Mobile Number', key: 'mobileNumber' },
+  ],
+];
+
+// Life Insurance: intent, gender, dob + contact
+const LIFE_INSURANCE: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Intent',        key: 'intent',      source: 'formData' },
+    { label: 'Gender',        key: 'gender',      source: 'formData' },
+    { label: 'Date of Birth', key: 'dateOfBirth', source: 'formData' },
+  ],
+  [
+    { label: 'Address',  key: 'address'  },
+    { label: 'State',    key: 'state',    source: 'formData' },
+    { label: 'District', key: 'district' },
+  ],
+  [
+    { label: 'Pin Code',      key: 'pinCode',     source: 'formData' },
+    { label: 'Email ID',      key: 'email'        },
+    { label: 'Mobile Number', key: 'mobileNumber' },
+  ],
+];
+
+// Vehicle Insurance — two/four wheeler + commercial. vehicleType is only set
+// on the commercial form; it renders as — for the others.
+const VEHICLE_INSURANCE: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Intent',           key: 'intent',      source: 'formData' },
+    { label: 'Vehicle Type',     key: 'vehicleType', source: 'formData' },
+    { label: 'Registration No.', key: 'regNumber',   source: 'formData' },
+  ],
+  [
+    { label: 'Registration Date', key: 'regDate', source: 'formData' },
+    { label: 'Address',           key: 'address'                     },
+    { label: 'State',             key: 'state',   source: 'formData' },
+  ],
+  [
+    { label: 'District',      key: 'district'                       },
+    { label: 'Pin Code',      key: 'pinCode',     source: 'formData' },
+    { label: 'Email ID',      key: 'email'                          },
+  ],
+  [
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    null,
+    null,
+  ],
+];
+
+// Generic insurance fallback when the service name doesn't identify a type
 const INSURANCE: ServiceSchema = [
   ...META,
   [
@@ -389,6 +479,26 @@ const DEFAULT: ServiceSchema = [
   ],
 ];
 
+/* ── Admin-created (manual) lead — only the fields the Add Lead form collects ── */
+
+export const MANUAL_SCHEMA: ServiceSchema = [
+  [
+    { label: 'Date',    key: 'date'    },
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+  ],
+  [
+    { label: 'Name',          key: 'name'         },
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    { label: 'Email ID',      key: 'email'        },
+  ],
+  [
+    { label: 'Address', key: 'address' },
+    null,
+    null,
+  ],
+];
+
 /* ── Schema registry ──────────────────────────────────────── */
 
 export function getSchema(service: string): ServiceSchema {
@@ -400,6 +510,9 @@ export function getSchema(service: string): ServiceSchema {
   if (s.includes('police clearance'))           return POLICE_CLEARANCE;
   if (s.includes('msme'))                       return MSME;
   if (s.includes('senior citizen'))             return SENIOR_CITIZEN_CARD;
+  if (s.includes('health insurance'))           return HEALTH_INSURANCE;
+  if (s.includes('life insurance'))             return LIFE_INSURANCE;
+  if (s.includes('wheeler insurance') || s.includes('commercial vehicle insurance')) return VEHICLE_INSURANCE;
   if (s.includes('rental agreement'))           return RENTAL_AGREEMENT;
   if (s.includes('lease agreement'))            return LEASE_AGREEMENT;
   if (s.includes('insurance'))                  return INSURANCE;
@@ -417,5 +530,7 @@ export function resolveField(lead: Lead, field: FieldDef | null): string {
     raw = (lead as unknown as Record<string, unknown>)[field.key];
   }
   if (raw === undefined || raw === null || raw === '') return '—';
-  return String(raw);
+  const str = String(raw);
+  if (/^\d{4}-\d{2}-\d{2}/.test(str)) return formatDate(str);
+  return str;
 }

@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Lock, User, ArrowRight, FileText, Briefcase, Award } from 'lucide-react';
-import { MOCK_USERS } from '@/lib/mockData';
-import type { User as UserType } from '@/lib/types';
+import * as api from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,40 +20,18 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-
-    const stored = localStorage.getItem('crm-users');
-    const storedUsers: UserType[] = stored ? JSON.parse(stored) : [];
-
-    // Check admin profile credentials saved from profile page
-    const savedProfile = localStorage.getItem('crm-profile');
-    const adminProfile = savedProfile ? JSON.parse(savedProfile) : null;
-    const adminBase = MOCK_USERS.find((u) => u.id === 'u1')!;
-    const adminUsername = adminProfile?.username ?? adminBase.username;
-    const adminPassword = adminProfile?.password ?? adminBase.password;
-
-    let matched: UserType | undefined;
-    if (form.username === adminUsername && form.password === adminPassword) {
-      matched = { ...adminBase, username: adminUsername, password: adminPassword };
-    } else {
-      matched =
-        storedUsers.find((u) => u.id !== 'u1' && u.username === form.username && u.password === form.password) ??
-        MOCK_USERS.find((u) => u.id !== 'u1' && u.username === form.username && u.password === form.password);
+    try {
+      const user = await api.login(form.username, form.password);
+      localStorage.setItem(
+        'crm-auth',
+        JSON.stringify({ userId: user.id, name: user.name, role: user.role, email: user.email })
+      );
+      router.push('/');
+    } catch (err) {
+      setError((err as Error).message || 'Invalid username or password.');
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-
-    if (!matched) {
-      setError('Invalid username or password.');
-      return;
-    }
-    if (matched.status === 'inactive') {
-      setError('Your account is inactive. Please contact your admin.');
-      return;
-    }
-
-    localStorage.setItem('crm-auth', JSON.stringify({ userId: matched.id, name: matched.name, role: matched.role }));
-    router.push('/');
   };
 
   return (

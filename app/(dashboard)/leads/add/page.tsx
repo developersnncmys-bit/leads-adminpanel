@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { UserPlus, CheckCircle } from 'lucide-react';
 import { SERVICES, DISTRICTS, LEAD_SOURCES } from '@/lib/constants';
 import { MOCK_USERS } from '@/lib/mockData';
-import type { User } from '@/lib/types';
+import type { User, Lead } from '@/lib/types';
+import { useAddLead } from '@/context/AddLeadContext';
 
 interface FormData {
   name: string;
@@ -54,6 +55,7 @@ const inputCls = (err?: string) =>
 
 export default function AddLeadPage() {
   const router = useRouter();
+  const { addLead } = useAddLead();
   const [form, setForm] = useState<FormData>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [loading, setLoading] = useState(false);
@@ -89,7 +91,27 @@ export default function AddLeadPage() {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    const newLead: Lead = {
+      id: crypto.randomUUID(),
+      slNo: 0,
+      name: form.name,
+      email: form.email,
+      mobileNumber: form.mobileNumber,
+      district: form.district,
+      service: form.service,
+      amount: Number(form.amount) || 0,
+      address: form.address,
+      source: form.source,
+      assignedTo: form.assignedTo || 'Unassigned',
+      followUpDate: form.followUpDate,
+      status: 'new',
+      paymentStatus: 'unpaid',
+      date: new Date().toISOString().split('T')[0],
+      notes: [],
+      createdAt: new Date().toISOString(),
+      leadType: 'manual',
+    };
+    addLead(newLead);
     setLoading(false);
     setSuccess(true);
     setTimeout(() => { setSuccess(false); setForm(INITIAL); }, 3000);

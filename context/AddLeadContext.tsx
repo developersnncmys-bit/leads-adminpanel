@@ -1,17 +1,20 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
-import { MOCK_LEADS } from '@/lib/mockData';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Lead } from '@/lib/types';
+import * as api from '@/lib/api';
+import { useAuthUser } from '@/lib/useAuthUser';
 
 interface AddLeadContextType {
   open: boolean;
   openModal: () => void;
   closeModal: () => void;
   leads: Lead[];
+  loading: boolean;
   addLead: (lead: Lead) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
+  refresh: () => void;
 }
 
 const AddLeadContext = createContext<AddLeadContextType>({
@@ -19,53 +22,68 @@ const AddLeadContext = createContext<AddLeadContextType>({
   openModal: () => {},
   closeModal: () => {},
   leads: [],
+  loading: true,
   addLead: () => {},
   updateLead: () => {},
   deleteLead: () => {},
+  refresh: () => {},
 });
 
-function loadLeads(): Lead[] {
-  if (typeof window === 'undefined') return MOCK_LEADS;
-  try {
-    const stored = localStorage.getItem('crm-leads');
-    if (!stored) return MOCK_LEADS;
-    const parsed: Lead[] = JSON.parse(stored);
-    if (!Array.isArray(parsed) || parsed.length === 0) return MOCK_LEADS;
-    // Stale check: if any non-admin lead is missing orderId it was saved before
-    // the formData update — reset to fresh mock data so all fields are visible.
-    const isStale = parsed.some(
-     (l) => l.leadType !== 'manual' && !l.orderId
-    );
-    if (isStale) {
-      // Preserve admin-added leads, replace website mock leads with fresh ones
-      const manualLeads = parsed.filter((l) => l.leadType === 'manual');
-      const fresh = [...manualLeads, ...MOCK_LEADS];
-      localStorage.setItem('crm-leads', JSON.stringify(fresh));
-      return fresh;
-    }
-    return parsed;
-  } catch {
-    return MOCK_LEADS;
-  }
-}
-
 export function AddLeadProvider({ children }: { children: React.ReactNode }) {
+  const auth = useAuthUser();
   const [open, setOpen] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>(loadLeads);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const persist = (next: Lead[]) => {
-    localStorage.setItem('crm-leads', JSON.stringify(next));
-    return next;
+  const refresh = useCallback(async () => {
+    try {
+      setAllLeads(await api.listLeads());
+    } catch (err) {
+      console.error('Failed to load leads:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const addLead = async (lead: Lead) => {
+    try {
+      const created = await api.createLead(lead);
+      setAllLeads((prev) => [created, ...prev]);
+    } catch (err) {
+      console.error('Failed to add lead:', err);
+    }
   };
 
-  const addLead = (lead: Lead) =>
-    setLeads((prev) => persist([lead, ...prev]));
+  // Optimistic update, then reconcile with the saved document. On failure we
+  // re-fetch so the UI never drifts from the backend.
+  const updateLead = async (id: string, updates: Partial<Lead>) => {
+    setAllLeads((prev) => prev.map((l) => (l.id === id ? { ...l, ...updates } : l)));
+    try {
+      const saved = await api.updateLead(id, updates);
+      setAllLeads((prev) => prev.map((l) => (l.id === id ? saved : l)));
+    } catch (err) {
+      console.error('Failed to update lead:', err);
+      refresh();
+    }
+  };
 
-  const updateLead = (id: string, updates: Partial<Lead>) =>
-    setLeads((prev) => persist(prev.map((l) => l.id === id ? { ...l, ...updates } : l)));
+  const deleteLead = async (id: string) => {
+    setAllLeads((prev) => prev.filter((l) => l.id !== id));
+    try {
+      await api.deleteLead(id);
+    } catch (err) {
+      console.error('Failed to delete lead:', err);
+      refresh();
+    }
+  };
 
-  const deleteLead = (id: string) =>
-    setLeads((prev) => persist(prev.filter((l) => l.id !== id)));
+  // Employees only see leads assigned to them; admins (and the brief moment
+  // before auth loads) see everything.
+  const leads = (auth.role && auth.role !== 'admin')
+    ? allLeads.filter((l) => l.assignedTo === auth.name)
+    : allLeads;
 
   return (
     <AddLeadContext.Provider value={{
@@ -73,9 +91,11 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
       openModal: () => setOpen(true),
       closeModal: () => setOpen(false),
       leads,
+      loading,
       addLead,
       updateLead,
       deleteLead,
+      refresh,
     }}>
       {children}
     </AddLeadContext.Provider>

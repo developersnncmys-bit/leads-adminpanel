@@ -3,15 +3,24 @@
 import { useState, useEffect } from 'react';
 import { X, BookOpen, CheckCircle, Bold, Italic, List, Link2, Image as ImageIcon } from 'lucide-react';
 import { useEditBlog } from '@/context/EditBlogContext';
+import { useBlogs } from '@/context/BlogContext';
 
 interface BlogForm {
   title: string;
+  category: string;
+  excerpt: string;
   metaTitle: string;
   metaDescription: string;
   description: string;
   status: 'published' | 'draft';
   readMins: string;
 }
+
+const CATEGORIES = [
+  'Passport', 'Tourist Visa', 'PAN Card', 'Senior Citizen Card', 'Insurance',
+  'Rental Agreement', 'Lease Agreement', 'Police Verification', 'MSME Certificate',
+  'Police Clearance Certificate', 'Affidavits / Annexure',
+];
 
 const inputCls = (err?: string) =>
   `w-full px-3 py-2.5 text-sm border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all text-gray-900 placeholder-gray-400 ${
@@ -20,12 +29,14 @@ const inputCls = (err?: string) =>
 
 export default function EditBlogModal() {
   const { blog, closeModal } = useEditBlog();
+  const { updateBlog } = useBlogs();
   const open = blog !== null;
 
   const [form, setForm] = useState<BlogForm>({
-    title: '', metaTitle: '', metaDescription: '', description: '', status: 'draft', readMins: '',
+    title: '', category: 'Passport', excerpt: '', metaTitle: '', metaDescription: '', description: '', status: 'draft', readMins: '',
   });
   const [errors, setErrors] = useState<Partial<BlogForm>>({});
+  const [submitError, setSubmitError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -34,13 +45,16 @@ export default function EditBlogModal() {
     if (blog) {
       setForm({
         title: blog.title,
+        category: blog.category || 'Passport',
+        excerpt: blog.excerpt || '',
         metaTitle: blog.metaTitle,
         metaDescription: blog.metaDescription,
         description: blog.description,
         status: blog.status,
-        readMins: '',
+        readMins: blog.readTime ? blog.readTime.replace(/\D/g, '') : '',
       });
       setErrors({});
+      setSubmitError('');
       setSuccess(false);
     }
   }, [blog]);
@@ -72,16 +86,27 @@ export default function EditBlogModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate() || !blog) return;
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 700));
+    setSubmitError('');
+    const saved = await updateBlog(blog.id, {
+      title: form.title,
+      category: form.category,
+      excerpt: form.excerpt,
+      metaTitle: form.metaTitle,
+      metaDescription: form.metaDescription,
+      description: form.description,
+      status: form.status,
+      readTime: form.readMins ? `${form.readMins} min` : '',
+    });
     setLoading(false);
-    setSuccess(true);
+    if (saved) setSuccess(true);
+    else setSubmitError('Could not save changes. Please try again.');
   };
 
   const handleClose = () => {
     closeModal();
-    setTimeout(() => { setErrors({}); setSuccess(false); }, 300);
+    setTimeout(() => { setErrors({}); setSubmitError(''); setSuccess(false); }, 300);
   };
 
   return (
@@ -127,6 +152,12 @@ export default function EditBlogModal() {
           ) : (
             <form id="edit-blog-form" onSubmit={handleSubmit} className="space-y-5">
 
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-2.5 rounded-xl">
+                  {submitError}
+                </div>
+              )}
+
               {/* Title + Image + Status + Read mins */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="sm:col-span-2">
@@ -141,6 +172,24 @@ export default function EditBlogModal() {
                     className={inputCls(errors.title)}
                   />
                   {errors.title && <p className="text-xs text-red-500 mt-1">{errors.title}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Category</label>
+                  <select value={form.category} onChange={set('category')} className={inputCls()}>
+                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Excerpt</label>
+                  <textarea
+                    placeholder="Short summary shown on blog cards"
+                    value={form.excerpt}
+                    onChange={set('excerpt')}
+                    rows={2}
+                    className={`${inputCls()} resize-none`}
+                  />
                 </div>
 
                 <div>

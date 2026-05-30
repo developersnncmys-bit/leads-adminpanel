@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   UserPlus,
@@ -8,12 +9,10 @@ import {
   UserCheck,
   CheckCircle,
   ArrowRight,
-  TrendingUp,
   FileText,
 } from 'lucide-react';
 
-import { STATUS_CONFIG } from '@/lib/constants';
-import { MOCK_AUTH_USER } from '@/lib/mockData';
+import { useAuthUser } from '@/lib/useAuthUser';
 
 import BarChart from '@/components/dashboard/BarChart';
 import DonutChart from '@/components/dashboard/DonutChart';
@@ -60,7 +59,7 @@ const PIPELINE_TABS = [
 
 export default function DashboardPage() {
   const { leads, openModal } = useAddLead();
-  const user = MOCK_AUTH_USER;
+  const user = useAuthUser();
 
   const stats = {
     new:       leads.filter((l) => l.status === 'new').length,
@@ -72,10 +71,6 @@ export default function DashboardPage() {
     dead:      leads.filter((l) => l.status === 'dead').length,
     total:     leads.length,
   };
-
-  const recentLeads = [...leads]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
 
   const total = stats.total;
 
@@ -93,14 +88,21 @@ export default function DashboardPage() {
   leads.forEach((l) => { serviceCounts[l.service] = (serviceCounts[l.service] || 0) + 1; });
   const categoryData = Object.entries(serviceCounts).map(([name, count]) => ({ name, count }));
 
-  const greeting = () => {
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const monthlyData = MONTHS.map((label, i) => ({
+    label,
+    value: leads.filter((l) => {
+      const d = new Date(l.createdAt);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === i;
+    }).length,
+  }));
+
+  const [greeting, setGreeting] = useState('');
+  useEffect(() => {
     const h = new Date().getHours();
-
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-
-    return 'Good evening';
-  };
+    setGreeting(h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening');
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -109,7 +111,7 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            {greeting()}, {user.name.split(' ')[0]}! 👋
+            {greeting ? `${greeting}, ${user.name.split(' ')[0]}! 👋` : ''}
           </h1>
 
           <p className="text-sm text-gray-400 mt-1">
@@ -176,22 +178,9 @@ export default function DashboardPage() {
                 Monthly lead activity this year
               </p>
             </div>
-
-            <div className="flex items-center gap-2">
-
-              <span className="flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full">
-                <TrendingUp className="w-3 h-3" />
-                +24%
-              </span>
-
-              <span className="text-xs text-gray-400">
-                vs last year
-              </span>
-
-            </div>
           </div>
 
-          <BarChart />
+          <BarChart data={monthlyData} />
         </div>
 
         {/* PIPELINE DISTRIBUTION */}
@@ -225,110 +214,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* TABLE + CATEGORY DISTRIBUTION */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-
-        {/* RECENT LEADS */}
-        <div className="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-
-            <div>
-              <h2 className="font-bold text-gray-900">
-                Recent Leads
-              </h2>
-
-              <p className="text-xs text-gray-400 mt-0.5">
-                {total} total leads tracked
-              </p>
-            </div>
-
-            <Link
-              href="/leads/new"
-              className="flex items-center gap-1 text-xs text-blue-600 font-semibold bg-blue-50 px-3 py-1.5 rounded-lg"
-            >
-              View all
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-
-          {/* Column headers — desktop only */}
-          <div className="hidden sm:grid grid-cols-[1fr_144px_120px_96px] gap-4 px-6 py-2.5 bg-gray-50 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lead</p>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Service</p>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-center">Status</p>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider text-right">Date</p>
-          </div>
-
-          <div className="divide-y divide-gray-50">
-
-            {recentLeads.map((lead) => {
-              const cfg = STATUS_CONFIG[lead.status];
-
-              return (
-                <Link
-                  key={lead.id}
-                  href={`/leads/view/${lead.id}`}
-                  className="block sm:grid sm:grid-cols-[1fr_144px_120px_96px] sm:items-center sm:gap-4 px-4 sm:px-6 py-3.5 hover:bg-gray-50 transition-colors"
-                >
-
-                  {/* Mobile layout */}
-                  <div className="sm:contents">
-
-                    {/* Row 1: avatar + name + status badge */}
-                    <div className="flex items-center justify-between gap-3 sm:contents">
-
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-white text-xs font-bold">{lead.name[0]}</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
-                            {lead.name}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {lead.mobileNumber}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Status badge — visible on mobile (right side), hidden on desktop (own column) */}
-                      <span className={`sm:hidden inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg flex-shrink-0 ${cfg.bg} ${cfg.color}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                        {cfg.label}
-                      </span>
-                    </div>
-
-                    {/* Row 2: service + date — mobile only */}
-                    <div className="sm:hidden flex items-center justify-between mt-2 pl-11">
-                      <p className="text-xs text-gray-500 truncate">{lead.service}</p>
-                      <p className="text-xs text-gray-400 flex-shrink-0 ml-3">{lead.date}</p>
-                    </div>
-
-                  </div>
-
-                  {/* Desktop-only columns */}
-                  <p className="hidden sm:block text-sm text-gray-600 truncate">
-                    {lead.service}
-                  </p>
-
-                  <span className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${cfg.bg} ${cfg.color}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                    {cfg.label}
-                  </span>
-
-                  <p className="hidden sm:block text-xs text-gray-400 text-right">
-                    {lead.date}
-                  </p>
-
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* CATEGORY DISTRIBUTION */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      {/* CATEGORY DISTRIBUTION */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
 
           <div className="flex items-center gap-2 mb-5">
 
@@ -396,7 +283,6 @@ export default function DashboardPage() {
               })}
           </div>
         </div>
-      </div>
     </div>
   );
 }

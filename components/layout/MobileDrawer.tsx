@@ -6,7 +6,7 @@ import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
   UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap,
 } from 'lucide-react';
-import { MOCK_AUTH_USER } from '@/lib/mockData';
+import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
@@ -22,7 +22,7 @@ const LEAD_NAV = [
 export default function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const pathname = usePathname();
   const { leads } = useAddLead();
-  const user = MOCK_AUTH_USER;
+  const user = useAuthUser();
   const stats: Record<string, number> = {
     new:       leads.filter((l) => l.status === 'new').length,
     overdue:   leads.filter((l) => l.status === 'overdue').length,

@@ -5,6 +5,6 @@ export function generateStaticParams() {
   return MOCK_BLOGS.map((b) => ({ id: b.id }));
 }
 
-export default function Page({ params }: { params: Promise<{ id: string }> }) {
-  return <EditBlogPageClient params={params} />;
+export default function Page() {
+  return <EditBlogPageClient />;
 }

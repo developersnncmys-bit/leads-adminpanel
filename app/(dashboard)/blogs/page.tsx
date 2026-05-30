@@ -1,16 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Plus, Edit3, Trash2, Search, Eye } from 'lucide-react';
-import { MOCK_BLOGS } from '@/lib/mockData';
-import { Blog } from '@/lib/types';
 import { useAddBlog } from '@/context/AddBlogContext';
 import { useEditBlog } from '@/context/EditBlogContext';
+import { useBlogs } from '@/context/BlogContext';
+import Pagination from '@/components/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function BlogsPage() {
-  const [blogs, setBlogs] = useState<Blog[]>(MOCK_BLOGS);
+  const { blogs, deleteBlog } = useBlogs();
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const { openModal } = useAddBlog();
   const { openModal: openEditModal } = useEditBlog();
 
@@ -18,9 +21,15 @@ export default function BlogsPage() {
     (b) => !search || b.title.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
+
   const handleDelete = (id: string) => {
     if (confirm('Delete this blog post?')) {
-      setBlogs((bs) => bs.filter((b) => b.id !== id));
+      deleteBlog(id);
     }
   };
 
@@ -76,7 +85,7 @@ export default function BlogsPage() {
                 <td colSpan={6} className="px-4 py-12 text-center text-gray-400 text-sm">No blogs found.</td>
               </tr>
             ) : (
-              filtered.map((blog) => (
+              pageItems.map((blog) => (
                 <tr key={blog.id} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-4 text-sm text-gray-500 font-medium">{blog.slNo}</td>
                   <td className="px-4 py-4 max-w-xs">
@@ -118,7 +127,7 @@ export default function BlogsPage() {
 
       {/* Mobile cards */}
       <div className="sm:hidden space-y-3">
-        {filtered.map((blog) => (
+        {pageItems.map((blog) => (
           <div key={blog.id} className="bg-white rounded-2xl border border-gray-100 p-4">
             <div className="flex items-start gap-3">
               <div className="w-16 h-12 bg-gray-100 rounded-xl flex-shrink-0 flex items-center justify-center text-gray-400 text-xs">IMG</div>
@@ -143,6 +152,18 @@ export default function BlogsPage() {
           </div>
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            total={filtered.length}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, Settings, ChevronDown, LogOut, UserCircle } from 'lucide-react';
-import { MOCK_AUTH_USER } from '@/lib/mockData';
+import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -20,6 +20,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const profileRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const { leads } = useAddLead();
+  const [now, setNow] = useState<Date | null>(null);
 
   const handleLogout = () => {
     setShowProfile(false);
@@ -27,7 +28,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     router.push('/login');
   };
 
-  const user = MOCK_AUTH_USER;
+  const user = useAuthUser();
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   useEffect(() => {
@@ -43,8 +44,17 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
-  const today = new Date().toLocaleDateString('en-IN', {
+  useEffect(() => {
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const dateStr = now?.toLocaleDateString('en-IN', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+  });
+  const timeStr = now?.toLocaleTimeString('en-IN', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
   });
 
   const results = search.length > 1
@@ -122,17 +132,21 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           )}
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
-          {today}
-        </div>
+        <div className="flex-1" />
 
-        <div className="flex-1 lg:flex-none" />
+        {now && (
+          <div className="hidden lg:flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+            <span>{dateStr}</span>
+            <span className="text-blue-300">·</span>
+            <span className="tabular-nums">{timeStr}</span>
+          </div>
+        )}
 
         <div className="flex items-center gap-2">
 
-          <Link href="/settings" className="hidden lg:block p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
+          {/* <Link href="/settings" className="hidden lg:block p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
             <Settings className="w-[18px] h-[18px]" />
-          </Link>
+          </Link> */}
 
           {/* Bell / mini dropdown */}
           <div className="hidden lg:block relative" ref={notifRef}>

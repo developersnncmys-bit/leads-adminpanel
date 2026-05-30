@@ -5,9 +5,9 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
-  Settings, LogOut, Zap,
+  Settings, Zap,
 } from 'lucide-react';
-import { MOCK_AUTH_USER } from '@/lib/mockData';
+import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
@@ -28,7 +28,7 @@ const ADMIN_NAV = [
 export default function Sidebar() {
   const pathname = usePathname();
   const { leads, openModal } = useAddLead();
-  const user = MOCK_AUTH_USER;
+  const user = useAuthUser();
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const isActive = (href: string) =>
@@ -95,7 +95,7 @@ export default function Sidebar() {
 
       {/* User */}
       <div className="px-3 py-3 border-t border-gray-100 flex-shrink-0">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer group">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl">
           <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-white text-xs font-bold">{initials}</span>
           </div>
@@ -103,7 +103,6 @@ export default function Sidebar() {
             <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
             <p className="text-[11px] text-gray-400 capitalize">{user.role}</p>
           </div>
-          <LogOut className="w-4 h-4 text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
         </div>
       </div>
     </aside>

@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef, use } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Phone, Mail, MessageSquare, Send, X, Calendar,
-  Trash2, CheckCircle, Clock, Plus, User,
+  Trash2, Clock, Plus, User,
 } from 'lucide-react';
 import { MOCK_USERS } from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
-import { Lead, LeadStatus } from '@/lib/types';
+import { LeadStatus } from '@/lib/types';
 import { useAddLead } from '@/context/AddLeadContext';
-import { getSchema, resolveField } from '@/lib/formSchemas';
+import { getSchema, resolveField, MANUAL_SCHEMA } from '@/lib/formSchemas';
+import { formatDate } from '@/lib/format';
 
 /* ─── Predefined comment chips ─────────────────────────────────── */
 const QUICK_COMMENTS = [
@@ -24,20 +25,13 @@ const QUICK_COMMENTS = [
 ];
 
 /* ─── Small helpers ─────────────────────────────────────────────── */
-function EditableField({ label, value, onChange }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white transition-all placeholder-gray-400"
-      />
+      <div className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl min-h-[42px] break-words">
+        {value}
+      </div>
     </div>
   );
 }
@@ -208,27 +202,11 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const lead = leads.find((l) => l.id === leadId);
   if (!lead) return notFound();
 
-  const schema = getSchema(lead.service);
-
-  const initialFields = useRef<Record<string, string>>({});
-
-  const [fields, setFields] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
-    schema.flat().forEach((f) => {
-      if (!f) return;
-      const val = resolveField(lead, f);
-      init[f.key] = val === '—' ? '' : val;
-    });
-    initialFields.current = { ...init };
-    return init;
-  });
-
-  const isDirty = Object.keys(fields).some((k) => fields[k] !== initialFields.current[k]);
+  const schema = lead.leadType === 'manual' ? MANUAL_SCHEMA : getSchema(lead.service);
 
   const [showComment, setShowComment] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [confirm, setConfirm] = useState<{ message: string; action: () => void } | null>(null);
-  const [saved, setSaved] = useState(false);
   const [employees, setEmployees] = useState<string[]>(() =>
     MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
   );
@@ -241,29 +219,6 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     }
   }, []);
 
-  const setField = (key: string, value: string) =>
-    setFields((prev) => ({ ...prev, [key]: value }));
-
-  const handleSave = () => {
-    const directUpdates: Record<string, unknown> = {};
-    const formDataUpdates: Record<string, string> = { ...(lead.formData || {}) };
-
-    schema.flat().forEach((f) => {
-      if (!f) return;
-      const value = fields[f.key] ?? '';
-      if (f.source === 'formData') {
-        formDataUpdates[f.key] = value;
-      } else {
-        directUpdates[f.key] = f.key === 'amount' ? (Number(value) || 0) : value;
-      }
-    });
-
-    updateLead(lead.id, { ...(directUpdates as Partial<Lead>), formData: formDataUpdates });
-    initialFields.current = { ...fields };
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
-
   const addComment = (text: string) => {
     const note = { id: Date.now().toString(), text, author: 'Deepak Kumar', createdAt: new Date().toISOString().split('T')[0] };
     updateLead(lead.id, { notes: [note, ...lead.notes] });
@@ -272,12 +227,20 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const changeStatus = (newStatus: LeadStatus, label: string) => {
     setConfirm({
       message: `Are you sure you want to change status to ${label}?`,
-      action: () => { updateLead(lead.id, { status: newStatus }); setConfirm(null); },
+      action: async () => {
+        await updateLead(lead.id, { status: newStatus });
+        setConfirm(null);
+        window.location.reload();
+      },
     });
   };
 
-  const handleFollowUp = (date: string) => {
-    updateLead(lead.id, { status: 'followup', followUpDate: date });
+  const handleFollowUp = async (date: string) => {
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
+    await updateLead(lead.id, { status, followUpDate: date });
+    window.location.reload();
   };
 
   const handleDelete = () => {
@@ -366,7 +329,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               { label: 'Amount',  value: lead.amount > 0 ? `₹${lead.amount.toLocaleString('en-IN')}` : '—' },
               { label: 'Payment', value: lead.paymentStatus === 'paid' ? 'Paid' : 'Unpaid' },
               { label: 'Source',  value: lead.source || '—' },
-              { label: 'Date',    value: lead.date || '—' },
+              { label: 'Date',    value: formatDate(lead.date) },
             ].map(({ label, value }) => (
               <div key={label} className="bg-white/5 rounded-xl px-3.5 py-2.5 border border-white/10">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{label}</p>
@@ -404,34 +367,25 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
           <div className="w-px h-5 bg-gray-200" />
 
-          {/* Status changers */}
-          <button onClick={() => changeStatus('inprocess', 'In Process')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
-              lead.status === 'inprocess'
-                ? 'bg-violet-600 text-white shadow-violet-200'
-                : 'bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100'
-            }`}>
-            {lead.status === 'inprocess' && <CheckCircle className="w-3.5 h-3.5" />}
-            In Process
-          </button>
-          <button onClick={() => changeStatus('converted', 'Converted')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
-              lead.status === 'converted'
-                ? 'bg-emerald-600 text-white shadow-emerald-200'
-                : 'bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-            }`}>
-            {lead.status === 'converted' && <CheckCircle className="w-3.5 h-3.5" />}
-            Converted
-          </button>
-          <button onClick={() => changeStatus('dead', 'Dead')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
-              lead.status === 'dead'
-                ? 'bg-gray-700 text-white'
-                : 'bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200'
-            }`}>
-            {lead.status === 'dead' && <CheckCircle className="w-3.5 h-3.5" />}
-            Dead
-          </button>
+          {/* Status changers — hidden for the lead's current status */}
+          {lead.status !== 'inprocess' && (
+            <button onClick={() => changeStatus('inprocess', 'In Process')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100">
+              In Process
+            </button>
+          )}
+          {lead.status !== 'converted' && (
+            <button onClick={() => changeStatus('converted', 'Converted')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100">
+              Converted
+            </button>
+          )}
+          {lead.status !== 'dead' && (
+            <button onClick={() => changeStatus('dead', 'Dead')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200">
+              Dead
+            </button>
+          )}
 
           {/* Delete */}
           <div className="ml-auto">
@@ -448,28 +402,16 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
         {/* Form fields */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">Lead Information</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Edit any field and save</p>
-            </div>
-            {(isDirty || saved) && (
-              <button onClick={handleSave}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all ${
-                  saved
-                    ? 'bg-emerald-600 text-white shadow-emerald-200'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
-                }`}>
-                {saved ? <><CheckCircle className="w-3.5 h-3.5" /> Saved!</> : 'Save Changes'}
-              </button>
-            )}
+          <div className="px-6 py-4 border-b border-gray-50">
+            <h2 className="text-sm font-semibold text-gray-900">Lead Information</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Details submitted with this lead</p>
           </div>
           <div className="p-6 space-y-4">
             {schema.map((row, ri) => (
               <div key={ri} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {row.map((fieldDef, ci) =>
                   fieldDef
-                    ? <EditableField key={ci} label={fieldDef.label} value={fields[fieldDef.key] ?? ''} onChange={(v) => setField(fieldDef.key, v)} />
+                    ? <ReadOnlyField key={ci} label={fieldDef.label} value={resolveField(lead, fieldDef)} />
                     : <div key={ci} />
                 )}
               </div>
@@ -583,7 +525,7 @@ function ManualLeadView({ leadId }: { leadId: string }) {
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold text-gray-900 truncate">{lead.name}</h1>
-          <p className="text-sm text-gray-500">Lead #{lead.id} · Added {lead.createdAt}</p>
+          <p className="text-sm text-gray-500">Lead #{lead.id} · Added {formatDate(lead.createdAt)}</p>
         </div>
         <button onClick={handleSave} className="hidden sm:flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors">
           {saved ? '✓ Saved!' : 'Save Changes'}
@@ -612,14 +554,12 @@ function ManualLeadView({ leadId }: { leadId: string }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { label: 'Mobile',   value: lead.mobileNumber },
-                { label: 'Email',    value: lead.email || '—' },
-                { label: 'District', value: lead.district },
-                { label: 'Address',  value: lead.address },
-                { label: 'Service',  value: lead.service },
-                { label: 'Amount',   value: `₹${lead.amount.toLocaleString('en-IN')}` },
-                { label: 'Source',   value: lead.source },
-                { label: 'Date',     value: lead.date },
+                { label: 'Mobile',  value: lead.mobileNumber },
+                { label: 'Email',   value: lead.email || '—' },
+                { label: 'Address', value: lead.address || '—' },
+                { label: 'Service', value: lead.service },
+                { label: 'Source',  value: lead.source || '—' },
+                { label: 'Date',    value: formatDate(lead.date) },
               ].map(({ label, value }) => (
                 <div key={label} className="flex items-start gap-3">
                   <div className="min-w-0">
@@ -686,9 +626,10 @@ function ManualLeadView({ leadId }: { leadId: string }) {
 
           <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <h3 className="font-semibold text-gray-900 mb-3">Assigned To</h3>
-            <select value={assignedTo} onChange={(e) => setAssignedTo(e.target.value)}
+            <select value={assignedTo || 'Unassigned'} onChange={(e) => setAssignedTo(e.target.value)}
               className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-gray-700"
             >
+              <option value="Unassigned">Select assigned user</option>
               {employees.map((emp) => <option key={emp} value={emp}>{emp}</option>)}
             </select>
           </div>
@@ -717,11 +658,27 @@ function ManualLeadView({ leadId }: { leadId: string }) {
 }
 
 /* ─── Entry point ───────────────────────────────────────────────── */
-export default function LeadViewPageClient({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const { leads } = useAddLead();
+export default function LeadViewPageClient() {
+  // Read id from the URL at runtime so static-export rewrites work:
+  // on Netlify we rewrite any /leads/view/<unknown-id> to the prerendered
+  // shell, and this hook still resolves the actual URL's id post-hydration.
+  const { id } = useParams<{ id: string }>();
+  const { leads, loading } = useAddLead();
   const lead = leads.find((l) => l.id === id);
-  if (!lead) notFound();
+
+  // On a hard refresh the lead list is still being fetched from the backend, so
+  // wait for it before deciding the lead doesn't exist — otherwise the page
+  // would 404 every time it's reloaded.
+  if (!lead) {
+    if (loading) {
+      return (
+        <div className="flex items-center justify-center py-32">
+          <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+        </div>
+      );
+    }
+    notFound();
+  }
 
   return <WebsiteLeadView leadId={id} />;
 }
