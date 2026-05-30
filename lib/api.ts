@@ -41,6 +41,16 @@ export async function deleteLead(id: string): Promise<void> {
   await request(`/leads/${id}`, { method: 'DELETE' });
 }
 
+// Pushes a single note onto the lead — leaves existing notes (and their
+// timestamps) untouched, unlike a full PATCH of the notes array.
+export async function addLeadNote(id: string, text: string, author = 'Admin'): Promise<Lead> {
+  const data = await request<{ data: Lead }>(`/leads/${id}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ text, author }),
+  });
+  return data.data;
+}
+
 /* ── Users ─────────────────────────────────────────────── */
 
 export async function listUsers(): Promise<User[]> {

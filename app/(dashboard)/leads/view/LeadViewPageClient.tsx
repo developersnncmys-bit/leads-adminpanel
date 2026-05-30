@@ -197,7 +197,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onCon
 /* ─── Website lead view ─────────────────────────────────────────── */
 function WebsiteLeadView({ leadId }: { leadId: string }) {
   const router = useRouter();
-  const { leads, updateLead, deleteLead } = useAddLead();
+  const { leads, updateLead, deleteLead, addNote } = useAddLead();
   const lead = leads.find((l) => l.id === leadId);
   if (!lead) return notFound();
 
@@ -219,8 +219,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   }, []);
 
   const addComment = (text: string) => {
-    const note = { id: Date.now().toString(), text, author: 'Deepak Kumar', createdAt: new Date().toISOString().split('T')[0] };
-    updateLead(lead.id, { notes: [note, ...lead.notes] });
+    // Goes through the dedicated POST /api/leads/:id/notes endpoint, which
+    // $pushes one note so the timestamps of older notes stay intact.
+    addNote(lead.id, text, 'Deepak Kumar');
   };
 
   const changeStatus = (newStatus: LeadStatus, label: string) => {
@@ -229,7 +230,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
       action: async () => {
         await updateLead(lead.id, { status: newStatus });
         setConfirm(null);
-        window.location.reload();
+        // Send the user to the matching pipeline's table page so they see
+        // the lead in its new bucket alongside the others.
+        router.push(`/leads/${newStatus}`);
       },
     });
   };
@@ -239,7 +242,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
     const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
     await updateLead(lead.id, { status, followUpDate: date });
-    window.location.reload();
+    router.push(`/leads/${status}`);
   };
 
   const handleDelete = () => {

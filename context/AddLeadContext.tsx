@@ -14,6 +14,7 @@ interface AddLeadContextType {
   addLead: (lead: Lead) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
+  addNote: (id: string, text: string, author?: string) => void;
   refresh: () => void;
 }
 
@@ -26,6 +27,7 @@ const AddLeadContext = createContext<AddLeadContextType>({
   addLead: () => {},
   updateLead: () => {},
   deleteLead: () => {},
+  addNote: () => {},
   refresh: () => {},
 });
 
@@ -79,6 +81,19 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Append a single note via the backend's $push endpoint. Existing notes'
+  // timestamps are preserved (a full PATCH of the notes array would rewrite
+  // them when Mongoose recreates the subdocuments).
+  const addNote = async (id: string, text: string, author = 'Admin') => {
+    try {
+      const saved = await api.addLeadNote(id, text, author);
+      setAllLeads((prev) => prev.map((l) => (l.id === id ? saved : l)));
+    } catch (err) {
+      console.error('Failed to add note:', err);
+      refresh();
+    }
+  };
+
   // Employees only see leads assigned to them; admins (and the brief moment
   // before auth loads) see everything.
   const leads = (auth.role && auth.role !== 'admin')
@@ -95,6 +110,7 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
       addLead,
       updateLead,
       deleteLead,
+      addNote,
       refresh,
     }}>
       {children}

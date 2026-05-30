@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Search, Download, ChevronUp, ChevronDown, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
@@ -20,6 +20,8 @@ interface Props {
 
 export default function LeadTable({ leads }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { deleteLead, updateLead } = useAddLead();
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<keyof Lead>('createdAt');
@@ -28,7 +30,29 @@ export default function LeadTable({ leads }: Props) {
   const [serviceFilter, setServiceFilter] = useState<string>('all');
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [page, setPage] = useState(1);
+  // Pagination is mirrored to `?page=N` so a browser-back from a lead detail
+  // page (or a manual refresh) lands the user on the same page they were on.
+  const initialPage = Math.max(1, Number(searchParams.get('page')) || 1);
+  const [page, setPage] = useState(initialPage);
+
+  // Sync `page` → URL in an effect (not inside setState) so we never call
+  // router.replace mid-render — doing that updates Link subscribers while
+  // LeadTable is still rendering and throws "Cannot update LinkComponent".
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    const urlPage = Math.max(1, Number(params.get('page')) || 1);
+    if (urlPage === page) return;
+    if (page <= 1) params.delete('page');
+    else params.set('page', String(page));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [page, pathname, router, searchParams]);
+
+  // Pick up external URL changes (back/forward, manual edit).
+  useEffect(() => {
+    const p = Math.max(1, Number(searchParams.get('page')) || 1);
+    setPage((prev) => (prev === p ? prev : p));
+  }, [searchParams]);
   const [employees, setEmployees] = useState<string[]>(() =>
     MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
   );
@@ -109,7 +133,15 @@ export default function LeadTable({ leads }: Props) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [search, paymentFilter, serviceFilter, assignedFilter]);
+  // Reset to page 1 when the user actively changes a filter — but NOT on the
+  // initial mount (otherwise we'd trample the page restored from the URL).
+  const firstFilterRender = useRef(true);
+  useEffect(() => {
+    if (firstFilterRender.current) { firstFilterRender.current = false; return; }
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, paymentFilter, serviceFilter, assignedFilter]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
   const downloadCSV = () => {
