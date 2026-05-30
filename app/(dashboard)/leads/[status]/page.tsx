@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import LeadStatusPageClient from './LeadStatusPageClient';
 
 export function generateStaticParams() {
@@ -7,5 +8,9 @@ export function generateStaticParams() {
 }
 
 export default function Page({ params }: { params: Promise<{ status: string }> }) {
-  return <LeadStatusPageClient params={params} />;
+  return (
+    <Suspense fallback={null}>
+      <LeadStatusPageClient params={params} />
+    </Suspense>
+  );
 }
