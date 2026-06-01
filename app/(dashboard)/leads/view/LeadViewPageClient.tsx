@@ -354,9 +354,35 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${cfg.bg} ${cfg.color} ${cfg.border}`}>
-                    {cfg.label}
-                  </span>
+                  {/* Status SELECT — the admin can change status from this
+                      dropdown at the top of the page. Follow-up / today /
+                      overdue are date-driven; if the current status is one of
+                      those it appears as the first option so the user sees
+                      the current value, but they pick a manually-settable
+                      status from the rest. */}
+                  <select
+                    value={lead.status}
+                    onChange={(e) => {
+                      const next = e.target.value as LeadStatus;
+                      if (next === lead.status) return;
+                      const labels: Record<LeadStatus, string> = {
+                        new: 'New', overdue: 'Overdue', today: "Today's Follow-up",
+                        followup: 'Follow-up', inprocess: 'In Process',
+                        converted: 'Converted', dead: 'Dead',
+                      };
+                      changeStatus(next, labels[next]);
+                    }}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${cfg.bg} ${cfg.color} ${cfg.border}`}
+                  >
+                    {/* show the date-derived current status (if any) at the top */}
+                    {!['new','inprocess','converted','dead'].includes(lead.status) && (
+                      <option value={lead.status}>{cfg.label}</option>
+                    )}
+                    <option value="new">New</option>
+                    <option value="inprocess">In Process</option>
+                    <option value="converted">Converted</option>
+                    <option value="dead">Dead</option>
+                  </select>
                 </div>
               </div>
             </div>

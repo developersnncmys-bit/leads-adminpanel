@@ -65,19 +65,19 @@ export default function LoginPage() {
           </div>
 
           <h1 className="text-5xl font-bold text-white leading-[1.1] mb-6 tracking-tight">
-            Manage your<br />leads with<br />
-            <span className="text-blue-400">clarity.</span>
+            Welcome<br />to your<br />
+            <span className="text-blue-400">workspace.</span>
           </h1>
           <p className="text-slate-400 text-base leading-relaxed max-w-xs">
-            Track every lead from inquiry to conversion. Built for the MakeMyDocuments team.
+            Sign in to manage leads, track follow-ups, and stay in sync with your team — for admins and employees alike.
           </p>
         </div>
 
         <div className="relative space-y-3">
           {[
-            { icon: FileText, label: '4,167 leads converted', sub: 'All time conversions', color: 'text-emerald-400' },
-            { icon: Briefcase, label: '11 document services', sub: 'Tourist Visa, Passport & more', color: 'text-blue-400' },
-            { icon: Award, label: "India's #1* online documents consultancy", sub: '100,000+ customers since 2013', color: 'text-violet-400' },
+            { icon: FileText, label: 'Lead Management',  sub: 'Track every enquiry from new to converted',     color: 'text-emerald-400' },
+            { icon: Briefcase, label: '11 Service Lines', sub: 'Passport, Visa, PAN, Insurance and more',      color: 'text-blue-400'    },
+            { icon: Award, label: 'Role-based Access',    sub: 'Admin and employee workflows on one dashboard', color: 'text-violet-400'  },
           ].map(({ icon: Icon, label, sub, color }) => (
             <div key={label} className="flex items-center gap-4 bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-5 py-4 hover:bg-white/[0.08] transition-colors">
               <div className="w-9 h-9 bg-white/10 rounded-xl flex items-center justify-center flex-shrink-0">

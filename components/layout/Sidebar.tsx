@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
-  Settings, Zap,
+  Settings,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
@@ -35,15 +35,13 @@ export default function Sidebar() {
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
+    <aside className="hidden lg:flex flex-col w-56 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
 
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-gray-100 flex-shrink-0">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-          <Zap className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <p className="text-sm font-bold text-gray-900 leading-tight">Make My Documents</p>
+      <div className="flex items-center gap-2.5 px-4 h-16 border-b border-gray-100 flex-shrink-0">
+        <img src="/logo.png" alt="MakeMyDocuments" width={32} height={32} className="rounded-lg flex-shrink-0" />
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-gray-900 leading-tight truncate">MakeMyDocuments</p>
           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">CRM</p>
         </div>
       </div>

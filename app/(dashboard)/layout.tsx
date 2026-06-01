@@ -25,7 +25,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Sidebar />
             <MobileDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-            <div className="flex-1 flex flex-col lg:ml-64 min-h-screen">
+            <div className="flex-1 flex flex-col lg:ml-56 min-h-screen">
               <Header onMenuToggle={() => setDrawerOpen(true)} />
               <main className="flex-1 p-5 lg:p-6 pb-24 lg:pb-8 animate-fade-in overflow-x-hidden">
                 {children}

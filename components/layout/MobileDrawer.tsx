@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
-  UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap,
+  UserCheck, Clock, CheckCircle, XCircle, Settings, X,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
 
@@ -60,12 +60,10 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
       <div className="fixed left-0 top-0 bottom-0 w-72 bg-white z-50 lg:hidden flex flex-col border-r border-gray-100">
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-900">Make My Documents</p>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <img src="/logo.png" alt="MakeMyDocuments" width={32} height={32} className="rounded-lg flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-900 truncate">MakeMyDocuments</p>
               <p className="text-[10px] text-gray-400 uppercase tracking-widest">CRM</p>
             </div>
           </div>
