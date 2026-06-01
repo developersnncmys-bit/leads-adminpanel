@@ -12,6 +12,7 @@ import { STATUS_CONFIG } from '@/lib/constants';
 import { LeadStatus } from '@/lib/types';
 import { useAddLead } from '@/context/AddLeadContext';
 import { useAuthUser } from '@/lib/useAuthUser';
+import * as api from '@/lib/api';
 import { getSchema, resolveField, MANUAL_SCHEMA } from '@/lib/formSchemas';
 import { formatDate } from '@/lib/format';
 
@@ -198,6 +199,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onCon
 /* ─── Website lead view ─────────────────────────────────────────── */
 function WebsiteLeadView({ leadId }: { leadId: string }) {
   const router = useRouter();
+  const sp = useSearchParams();
   const { leads, updateLead, deleteLead, addNote } = useAddLead();
   const auth = useAuthUser();
   const lead = leads.find((l) => l.id === leadId);
@@ -232,48 +234,58 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     addNote(lead.id, text, author);
   };
 
-  // Navigates to a pipeline page. Tries the Next router first (SPA, keeps the
-  // context state we just optimistically updated so the destination shows the
-  // lead immediately). Falls back to a hard navigation 250ms later if the URL
-  // hasn't actually changed — protects against any router-replace race.
-  const goToPipeline = (status: string) => {
-    const target = `/leads/${status}`;
-    router.replace(target);
-    setTimeout(() => {
-      if (typeof window !== 'undefined' && window.location.pathname !== target) {
-        window.location.assign(target);
-      }
-    }, 250);
+  // The pipeline the user came from (passed as ?from= when they clicked the
+  // lead in LeadTable). After any action that takes the lead off the detail
+  // view — status change, follow-up, delete — we send them back to that exact
+  // page+pagination, instead of jumping to the new status's pipeline.
+  const fromParam = sp.get('from');
+  const backUrl = fromParam || `/leads/${lead.status}`;
+
+  // Hard-navigates back to the originating pipeline. router.replace was
+  // racing with the unmount-after-optimistic-update; window.location is
+  // deterministic and forces the table to refetch into the right page state.
+  const goBack = () => {
+    if (typeof window !== 'undefined') window.location.assign(backUrl);
+    else router.replace(backUrl);
   };
+
+  // We AWAIT the context methods (which await the backend PATCH/DELETE)
+  // before navigating. Without the await the hard reload races the
+  // outstanding network call — the destination page refetches the old data
+  // and the lead "comes back" until you refresh again.
 
   const changeStatus = (newStatus: LeadStatus, label: string) => {
     setConfirm({
       message: `Are you sure you want to change status to ${label}?`,
-      action: () => {
-        // Close the modal, kick off the optimistic update (and background API
-        // PATCH), then jump to the matching pipeline page. Doing this in a
-        // single synchronous tick avoids the await/promise races we hit
-        // earlier where the navigation appeared to "snap back" to /leads/new.
+      action: async () => {
         setConfirm(null);
-        updateLead(lead.id, { status: newStatus });
-        goToPipeline(newStatus);
+        await updateLead(lead.id, { status: newStatus });
+        goBack();
       },
     });
   };
 
-  const handleFollowUp = (date: string) => {
+  const handleFollowUp = async (date: string) => {
     setShowFollowUp(false);
     const n = new Date();
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
     const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
-    updateLead(lead.id, { status, followUpDate: date });
-    goToPipeline(status);
+    await updateLead(lead.id, { status, followUpDate: date });
+    goBack();
   };
 
   const handleDelete = () => {
     setConfirm({
       message: 'Are you sure you want to delete this lead? This cannot be undone.',
-      action: () => { deleteLead(lead.id); router.push('/leads/new'); },
+      action: async () => {
+        setConfirm(null);
+        // Calling api.deleteLead directly (not the context method) so the
+        // optimistic remove doesn't trigger notFound() on this view
+        // mid-await. Once the backend confirms, we navigate — the
+        // destination's listLeads refetch then shows the lead truly gone.
+        try { await api.deleteLead(lead.id); } catch (err) { console.error('Failed to delete lead:', err); }
+        goBack();
+      },
     });
   };
 
