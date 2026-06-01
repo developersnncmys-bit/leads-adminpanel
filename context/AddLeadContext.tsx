@@ -51,12 +51,12 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Poll the API every 30 seconds so new website leads appear in the admin
-  // panel without requiring a manual refresh. .catch() is defensive: refresh
+  // Poll the API every 10 seconds so a lead submitted on the website rings
+  // the admin-panel chime within that window. .catch() is defensive: refresh
   // already swallows its own errors, but we never want the unawaited promise
   // here to surface as an unhandled rejection.
   useEffect(() => {
-    const id = setInterval(() => { refresh().catch(() => {}); }, 30_000);
+    const id = setInterval(() => { refresh().catch(() => {}); }, 10_000);
     return () => clearInterval(id);
   }, [refresh]);
 
