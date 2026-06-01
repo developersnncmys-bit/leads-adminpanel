@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { BookOpen, Plus, Edit3, Trash2, Search, Eye } from 'lucide-react';
+import { BookOpen, Plus, Edit3, Trash2, Search, ArrowLeft, Filter } from 'lucide-react';
 import { useAddBlog } from '@/context/AddBlogContext';
 import { useEditBlog } from '@/context/EditBlogContext';
 import { useBlogs } from '@/context/BlogContext';
@@ -10,21 +10,30 @@ import Pagination from '@/components/Pagination';
 
 const PAGE_SIZE = 10;
 
+const CATEGORIES = [
+  'Passport', 'Tourist Visa', 'PAN Card', 'Senior Citizen Card', 'Insurance',
+  'Rental Agreement', 'Lease Agreement', 'Police Verification', 'MSME Certificate',
+  'Police Clearance Certificate', 'Affidavits / Annexure',
+];
+
 export default function BlogsPage() {
   const { blogs, deleteBlog } = useBlogs();
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const { openModal } = useAddBlog();
   const { openModal: openEditModal } = useEditBlog();
 
-  const filtered = blogs.filter(
-    (b) => !search || b.title.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = blogs.filter((b) => {
+    const matchSearch = !search || b.title.toLowerCase().includes(search.toLowerCase());
+    const matchCategory = categoryFilter === 'all' || b.category === categoryFilter;
+    return matchSearch && matchCategory;
+  });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { setPage(1); }, [search, categoryFilter]);
   useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
   const handleDelete = (id: string) => {
@@ -35,6 +44,16 @@ export default function BlogsPage() {
 
   return (
     <div className="space-y-5">
+
+      {/* Back to Settings */}
+      <Link
+        href="/settings"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Settings
+      </Link>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -55,16 +74,31 @@ export default function BlogsPage() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search blogs..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all"
-        />
+      {/* Search + Category filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search blogs..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white transition-all"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 rounded-xl bg-white text-sm text-gray-600">
+          <Filter className="w-4 h-4 text-gray-400" />
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="bg-transparent focus:outline-none text-sm cursor-pointer"
+          >
+            <option value="all">All Services</option>
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Desktop table */}

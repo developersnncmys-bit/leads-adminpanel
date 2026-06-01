@@ -198,23 +198,62 @@ export default function EditBlogModal() {
 
                 <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
-                    <ImageIcon className="w-3.5 h-3.5 text-gray-400" /> Featured Image URL
+                    <ImageIcon className="w-3.5 h-3.5 text-gray-400" /> Featured Image
                   </label>
-                  <input
-                    type="url"
-                    placeholder="https://… (paste a hosted image URL)"
-                    value={form.image}
-                    onChange={set('image')}
-                    className={inputCls()}
-                  />
-                  {form.image && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={form.image}
-                      alt="preview"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-                      className="mt-2 w-32 h-20 object-cover rounded-lg border border-gray-200"
-                    />
+                  {form.image ? (
+                    <div className="flex items-start gap-3">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={form.image}
+                        alt="preview"
+                        className="w-32 h-20 object-cover rounded-lg border border-gray-200 flex-shrink-0"
+                      />
+                      <div className="flex flex-col gap-2">
+                        <label className="cursor-pointer inline-block px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-center">
+                          Change
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result || '') }));
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, image: '' }))}
+                          className="px-3 py-1.5 text-xs font-semibold text-red-500 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="block cursor-pointer">
+                      <div className="flex items-center justify-center w-full h-28 bg-gray-50 border border-dashed border-gray-300 rounded-xl hover:bg-gray-100 transition-colors">
+                        <div className="text-center">
+                          <ImageIcon className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                          <p className="text-xs text-gray-500">Click to upload an image</p>
+                        </div>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const reader = new FileReader();
+                          reader.onload = () => setForm((f) => ({ ...f, image: String(reader.result || '') }));
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </label>
                   )}
                 </div>
 
