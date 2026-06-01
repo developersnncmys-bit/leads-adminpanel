@@ -22,6 +22,46 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const { leads } = useAddLead();
   const [now, setNow] = useState<Date | null>(null);
 
+  // Track which lead ids we've already shown so polling-driven refreshes only
+  // ring a chime for genuinely new website leads (never on the very first
+  // render — otherwise every existing lead would beep at page load).
+  const seenLeadIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (seenLeadIds.current === null) {
+      seenLeadIds.current = new Set(leads.map((l) => l.id));
+      return;
+    }
+    const fresh = leads.filter(
+      (l) =>
+        !seenLeadIds.current!.has(l.id) &&
+        l.status === 'new' &&
+        l.leadType !== 'manual',
+    );
+    if (fresh.length > 0) {
+      try {
+        const Ctx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (Ctx) {
+          const ctx = new Ctx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0.25, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.45);
+        }
+      } catch {
+        // Browser may block audio before the user interacts — silent fallback.
+      }
+    }
+    seenLeadIds.current = new Set(leads.map((l) => l.id));
+  }, [leads]);
+
   const handleLogout = () => {
     setShowProfile(false);
     localStorage.removeItem('crm-auth');
@@ -66,6 +106,15 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     : [];
 
   const notifications = [
+    ...leads
+      .filter((l) => l.status === 'new')
+      .map((l) => ({
+        id: l.id,
+        type: 'new' as const,
+        message: `New lead — ${l.name}`,
+        sub: l.service,
+        href: `/leads/view?id=${l.id}`,
+      })),
     ...leads
       .filter((l) => l.status === 'overdue')
       .map((l) => ({

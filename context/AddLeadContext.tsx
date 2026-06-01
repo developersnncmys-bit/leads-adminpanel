@@ -49,6 +49,14 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Poll the API every 30 seconds so new website leads appear in the admin
+  // panel without requiring a manual refresh. The Header watches the leads
+  // list for unseen ids and plays a notification sound when they arrive.
+  useEffect(() => {
+    const id = setInterval(() => { refresh(); }, 30_000);
+    return () => clearInterval(id);
+  }, [refresh]);
+
   const addLead = async (lead: Lead) => {
     try {
       const created = await api.createLead(lead);
