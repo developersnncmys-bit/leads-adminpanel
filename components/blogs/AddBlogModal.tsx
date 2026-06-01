@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, BookOpen, CheckCircle, Bold, Italic, List, Link2, Image as ImageIcon } from 'lucide-react';
+import { X, BookOpen, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { useAddBlog } from '@/context/AddBlogContext';
 import { useBlogs } from '@/context/BlogContext';
+import RichTextEditor from './RichTextEditor';
 
 interface BlogForm {
   title: string;
   category: string;
   excerpt: string;
+  image: string;
   metaTitle: string;
   metaDescription: string;
   description: string;
@@ -17,7 +19,7 @@ interface BlogForm {
 }
 
 const INITIAL: BlogForm = {
-  title: '', category: 'Passport', excerpt: '', metaTitle: '', metaDescription: '', description: '', status: 'draft', readMins: '',
+  title: '', category: 'Passport', excerpt: '', image: '', metaTitle: '', metaDescription: '', description: '', status: 'draft', readMins: '',
 };
 
 const CATEGORIES = [
@@ -74,6 +76,7 @@ export default function AddBlogModal() {
       title: form.title,
       category: form.category,
       excerpt: form.excerpt,
+      image: form.image,
       metaTitle: form.metaTitle,
       metaDescription: form.metaDescription,
       description: form.description,
@@ -188,13 +191,26 @@ export default function AddBlogModal() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Featured Image</label>
-                  <label className="flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors w-fit">
-                    <ImageIcon className="w-4 h-4" />
-                    Choose File
-                    <input type="file" accept="image/*" className="hidden" />
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-gray-400" /> Featured Image URL
                   </label>
+                  <input
+                    type="url"
+                    placeholder="https://… (paste a hosted image URL)"
+                    value={form.image}
+                    onChange={set('image')}
+                    className={inputCls()}
+                  />
+                  {form.image && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={form.image}
+                      alt="preview"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                      className="mt-2 w-32 h-20 object-cover rounded-lg border border-gray-200"
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -242,35 +258,10 @@ export default function AddBlogModal() {
                 <label className="block text-xs font-semibold text-gray-600 mb-1.5">
                   Description <span className="text-red-500">*</span>
                 </label>
-                <div className="border border-gray-200 rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
-                    {[
-                      { icon: Bold, label: 'Bold' },
-                      { icon: Italic, label: 'Italic' },
-                      { icon: Link2, label: 'Link' },
-                      { icon: List, label: 'List' },
-                      { icon: ImageIcon, label: 'Image' },
-                    ].map(({ icon: Icon, label }) => (
-                      <button
-                        key={label}
-                        type="button"
-                        title={label}
-                        className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-lg transition-colors"
-                      >
-                        <Icon className="w-4 h-4" />
-                      </button>
-                    ))}
-                  </div>
-                  <textarea
-                    placeholder="Write your blog content here..."
-                    value={form.description}
-                    onChange={set('description')}
-                    rows={8}
-                    className={`w-full px-4 py-3 text-sm focus:outline-none resize-none bg-white text-gray-900 placeholder-gray-400 ${
-                      errors.description ? 'ring-2 ring-inset ring-red-400' : ''
-                    }`}
-                  />
-                </div>
+                <RichTextEditor
+                  value={form.description}
+                  onChange={(html) => setForm((f) => ({ ...f, description: html }))}
+                />
                 {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
               </div>
             </form>

@@ -72,14 +72,14 @@ const POLICE_VERIFICATION: ServiceSchema = [
   ],
   ASSIGN_ROW,
   [
-    { label: 'Gender',        key: 'gender',        source: 'formData' },
-    { label: 'Date of Birth', key: 'dateOfBirth',   source: 'formData' },
-    { label: 'Place Of Birth', key: 'placeOfBirth', source: 'formData' },
+    { label: 'Gender',        key: 'gender',      source: 'formData' },
+    { label: 'Date of Birth', key: 'dateOfBirth', source: 'formData' },
+    { label: 'Address',       key: 'address'                        },
   ],
   [
     { label: 'Education Qualification', key: 'educationQualification', source: 'formData' },
     { label: 'Employment Type',         key: 'employmentType',         source: 'formData' },
-    { label: 'Address',                 key: 'address'                },
+    null,
   ],
   [
     { label: 'State',    key: 'state',    source: 'formData' },
@@ -122,12 +122,12 @@ const PASSPORT: ServiceSchema = [
     { label: 'Date of Birth',   key: 'dateOfBirth',   source: 'formData' },
   ],
   [
-    { label: 'Place Of Birth',          key: 'placeOfBirth',           source: 'formData' },
     { label: 'Education Qualification', key: 'educationQualification', source: 'formData' },
     { label: 'Employment Type',         key: 'employmentType',         source: 'formData' },
+    { label: 'Marital Status',          key: 'maritalStatus',          source: 'formData' },
   ],
   [
-    { label: 'Marital Status',  key: 'maritalStatus', source: 'formData' },
+    { label: "Spouse's Name",   key: 'spouseName',    source: 'formData' },
     { label: "Father's Name",   key: 'fatherName',    source: 'formData' },
     { label: "Mother's Name",   key: 'motherName',    source: 'formData' },
   ],
@@ -280,39 +280,44 @@ const RENTAL_AGREEMENT: ServiceSchema = [
     { label: "Owner's Address", key: 'ownerAddress', source: 'formData' },
   ],
   [
-    { label: "Owner's State",   key: 'ownerState',   source: 'formData' },
-    { label: "Owner's Pin",     key: 'ownerPin',     source: 'formData' },
-    { label: "Tenant's Name",   key: 'tenantName',   source: 'formData' },
+    { label: "Owner's State",    key: 'ownerState',    source: 'formData' },
+    { label: "Owner's District", key: 'ownerDistrict', source: 'formData' },
+    { label: "Owner's Pin",      key: 'ownerPin',      source: 'formData' },
   ],
   [
+    { label: "Tenant's Name",    key: 'tenantName',    source: 'formData' },
     { label: "Tenant's Father",  key: 'tenantFather',  source: 'formData' },
     { label: "Tenant's Address", key: 'tenantAddress', source: 'formData' },
-    { label: "Tenant's State",   key: 'tenantState',   source: 'formData' },
   ],
   [
-    { label: "Tenant's Pin",     key: 'tenantPin',      source: 'formData' },
+    { label: "Tenant's State",    key: 'tenantState',    source: 'formData' },
+    { label: "Tenant's District", key: 'tenantDistrict', source: 'formData' },
+    { label: "Tenant's Pin",      key: 'tenantPin',      source: 'formData' },
+  ],
+  [
     { label: 'Shifted Date',     key: 'shiftedDate',    source: 'formData' },
     { label: 'Shifting Address', key: 'shiftingAddress', source: 'formData' },
-  ],
-  [
     { label: 'Security Deposit', key: 'securityDeposit', source: 'formData' },
-    { label: 'Monthly Rent',     key: 'monthlyRent',     source: 'formData' },
-    { label: 'Advance Amount',   key: 'advanceAmount',   source: 'formData' },
   ],
   [
-    { label: 'Advance Paid',    key: 'advancePaid',     source: 'formData' },
-    { label: 'Water Charges',   key: 'waterCharges',    source: 'formData' },
+    { label: 'Monthly Rent',   key: 'monthlyRent',   source: 'formData' },
+    { label: 'Advance Amount', key: 'advanceAmount', source: 'formData' },
+    { label: 'Advance Paid',   key: 'advancePaid',   source: 'formData' },
+  ],
+  [
+    { label: 'Water Charges',    key: 'waterCharges',    source: 'formData' },
     { label: 'Painting Charges', key: 'paintingCharges', source: 'formData' },
+    { label: 'Accommodation',    key: 'accommodation',   source: 'formData' },
   ],
   [
-    { label: 'Accommodation',     key: 'accommodation',   source: 'formData' },
-    { label: 'Appliances',        key: 'appliances',      source: 'formData' },
-    { label: 'Shipping Address',  key: 'shippingAddress', source: 'formData' },
+    { label: 'Appliances',       key: 'appliances',      source: 'formData' },
+    { label: 'Shipping Address', key: 'shippingAddress', source: 'formData' },
+    { label: 'Shipping State',   key: 'shippingState',   source: 'formData' },
   ],
   [
-    { label: 'Shipping State', key: 'shippingState', source: 'formData' },
-    { label: 'Shipping Pin',   key: 'shippingPin',   source: 'formData' },
-    { label: 'Assigned User',  key: 'assignedTo'    },
+    { label: 'Shipping District', key: 'shippingDistrict', source: 'formData' },
+    { label: 'Shipping Pin',      key: 'shippingPin',      source: 'formData' },
+    { label: 'Assigned User',     key: 'assignedTo'                          },
   ],
   [
     { label: 'Mobile Number', key: 'mobileNumber' },
@@ -321,16 +326,69 @@ const RENTAL_AGREEMENT: ServiceSchema = [
   ],
 ];
 
-/* ── Lease Agreement (same structure as Rental) ─────────── */
+/* ── Lease Agreement (Rental layout, but `safetyDeposit` replaces `advanceAmount`) ─ */
 const LEASE_AGREEMENT: ServiceSchema = [
-  ...RENTAL_AGREEMENT.slice(0, 7),
-  // Replace advance amount row with safety deposit
+  ...META,
   [
-    { label: 'Security Deposit', key: 'securityDeposit', source: 'formData' },
-    { label: 'Monthly Rent',     key: 'monthlyRent',     source: 'formData' },
-    { label: 'Safety Deposit',   key: 'safetyDeposit',   source: 'formData' },
+    { label: 'Service',         key: 'service'          },
+    { label: 'Agreement Type',  key: 'agreementType', source: 'formData' },
+    { label: 'Amount',          key: 'amount'           },
   ],
-  ...RENTAL_AGREEMENT.slice(8),
+  [
+    { label: 'Status',       key: 'paymentStatus'               },
+    { label: 'Role',         key: 'role',        source: 'formData' },
+    { label: 'Stamp Paper',  key: 'stampPaper',  source: 'formData' },
+  ],
+  [
+    { label: "Owner's Name",    key: 'ownerName',    source: 'formData' },
+    { label: "Owner's Father",  key: 'ownerFather',  source: 'formData' },
+    { label: "Owner's Address", key: 'ownerAddress', source: 'formData' },
+  ],
+  [
+    { label: "Owner's State",    key: 'ownerState',    source: 'formData' },
+    { label: "Owner's District", key: 'ownerDistrict', source: 'formData' },
+    { label: "Owner's Pin",      key: 'ownerPin',      source: 'formData' },
+  ],
+  [
+    { label: "Tenant's Name",    key: 'tenantName',    source: 'formData' },
+    { label: "Tenant's Father",  key: 'tenantFather',  source: 'formData' },
+    { label: "Tenant's Address", key: 'tenantAddress', source: 'formData' },
+  ],
+  [
+    { label: "Tenant's State",    key: 'tenantState',    source: 'formData' },
+    { label: "Tenant's District", key: 'tenantDistrict', source: 'formData' },
+    { label: "Tenant's Pin",      key: 'tenantPin',      source: 'formData' },
+  ],
+  [
+    { label: 'Shifted Date',     key: 'shiftedDate',    source: 'formData' },
+    { label: 'Shifting Address', key: 'shiftingAddress', source: 'formData' },
+    { label: 'Security Deposit', key: 'securityDeposit', source: 'formData' },
+  ],
+  [
+    { label: 'Monthly Rent',   key: 'monthlyRent',   source: 'formData' },
+    { label: 'Safety Deposit', key: 'safetyDeposit', source: 'formData' },
+    { label: 'Advance Paid',   key: 'advancePaid',   source: 'formData' },
+  ],
+  [
+    { label: 'Water Charges',    key: 'waterCharges',    source: 'formData' },
+    { label: 'Painting Charges', key: 'paintingCharges', source: 'formData' },
+    { label: 'Accommodation',    key: 'accommodation',   source: 'formData' },
+  ],
+  [
+    { label: 'Appliances',       key: 'appliances',      source: 'formData' },
+    { label: 'Shipping Address', key: 'shippingAddress', source: 'formData' },
+    { label: 'Shipping State',   key: 'shippingState',   source: 'formData' },
+  ],
+  [
+    { label: 'Shipping District', key: 'shippingDistrict', source: 'formData' },
+    { label: 'Shipping Pin',      key: 'shippingPin',      source: 'formData' },
+    { label: 'Assigned User',     key: 'assignedTo'                          },
+  ],
+  [
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    { label: 'Email ID',      key: 'email'        },
+    null,
+  ],
 ];
 
 /* ── Insurance ──────────────────────────────────────────── */
@@ -458,19 +516,19 @@ const DEFAULT: ServiceSchema = [
   ],
   ASSIGN_ROW,
   [
-    { label: 'Gender',         key: 'gender'               },
-    { label: 'Date of Birth',  key: 'dateOfBirth'          },
-    { label: 'Place Of Birth', key: 'placeOfBirth'         },
+    { label: 'Gender',        key: 'gender'      },
+    { label: 'Date of Birth', key: 'dateOfBirth' },
+    { label: 'Address',       key: 'address'     },
   ],
   [
     { label: 'Education Qualification', key: 'educationQualification' },
     { label: 'Employment Type',         key: 'employmentType'         },
-    { label: 'Address',                 key: 'address'                },
+    { label: 'State',                   key: 'state'                  },
   ],
   [
-    { label: 'State',    key: 'state'    },
     { label: 'District', key: 'district' },
     { label: 'Pin Code', key: 'pinCode'  },
+    null,
   ],
   [
     { label: 'Near By Police Station', key: 'nearbyPoliceStation' },
@@ -544,6 +602,25 @@ const CONTACT_US: ServiceSchema = [
   ],
 ];
 
+/* ── Home page "Apply in 2 Minutes" callback form ──────────── */
+// Triggered when the lead's source starts with 'Home' (the Solution
+// component sends `source: 'Home – Stop Searching'`). The form collects
+// only name, mobile and the requested service — nothing else should show.
+const HOME_FORM: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Mobile Number', key: 'mobileNumber' },
+    null,
+    null,
+  ],
+];
+
 // Used when the lead's source is 'Blog Contact' (the sidebar form on blog
 // detail pages). Same as Contact Us but also collects address fields.
 
@@ -579,6 +656,7 @@ export function getSchema(input: Lead | string): ServiceSchema {
   // layout that only shows what the small contact form actually collected.
   if (src === 'contact us')   return CONTACT_US;
   if (src === 'blog contact') return BLOG_CONTACT;
+  if (src.startsWith('home')) return HOME_FORM;
 
   if (s.includes('affidavit') || s.includes('annexure')) return AFFIDAVIT;
   if (s.includes('visa'))                       return TOURIST_VISA;

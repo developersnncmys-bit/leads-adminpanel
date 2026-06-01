@@ -241,14 +241,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                     <UserCircle className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
                     <span className="flex-1 text-left">My Profile</span>
                   </button>
-                  <Link
-                    href="/settings"
-                    onClick={() => setShowProfile(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors group"
-                  >
-                    <Settings className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                    <span className="flex-1">Settings</span>
-                  </Link>
                 </div>
                 <div className="px-2 pb-2">
                   <button

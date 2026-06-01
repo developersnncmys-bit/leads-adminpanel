@@ -1,13 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Users, UserPlus, Edit3, Trash2,
   CheckCircle, XCircle, Search, X, Eye, EyeOff, Shield, UserCheck,
+  BookOpen, ArrowRight, Plus,
 } from 'lucide-react';
 import { User, UserRole } from '@/lib/types';
 import * as api from '@/lib/api';
 import Pagination from '@/components/Pagination';
+import { useBlogs } from '@/context/BlogContext';
+import { useAddBlog } from '@/context/AddBlogContext';
 
 const PAGE_SIZE = 10;
 
@@ -25,6 +29,8 @@ type FormErrors = Partial<Record<keyof UserForm, string>>;
 const INITIAL_FORM: UserForm = { name: '', email: '', phone: '', role: 'employee', username: '', password: '' };
 
 export default function SettingsPage() {
+  const { blogs, loading: blogsLoading, deleteBlog } = useBlogs();
+  const { openModal: openAddBlog } = useAddBlog();
   const [users, setUsers] = useState<User[]>([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -371,6 +377,82 @@ export default function SettingsPage() {
           pageSize={PAGE_SIZE}
           onPageChange={setPage}
         />
+      </div>
+
+      {/* ── Blog Management ────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-sm shadow-indigo-200">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">Blog Management</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {blogsLoading ? 'Loading…' : `${blogs.length} blog post${blogs.length === 1 ? '' : 's'}`}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openAddBlog}
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm shadow-blue-200"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Blog</span>
+            </button>
+            <Link
+              href="/blogs"
+              className="flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+            >
+              <span>View All</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="divide-y divide-gray-50">
+          {blogs.length === 0 ? (
+            <p className="px-5 py-10 text-center text-sm text-gray-400">
+              {blogsLoading ? 'Loading blogs…' : 'No blog posts yet — click "Add Blog" to create one.'}
+            </p>
+          ) : (
+            blogs.slice(0, 5).map((blog) => (
+              <div key={blog.id} className="flex items-center justify-between gap-3 px-5 py-3.5 hover:bg-gray-50/60 transition-colors">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{blog.title}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                      blog.status === 'published' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {blog.status === 'published' ? 'Published' : 'Draft'}
+                    </span>
+                    {blog.category && (
+                      <span className="text-[11px] text-gray-500">{blog.category}</span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete "${blog.title}"?`)) deleteBlog(blog.id);
+                  }}
+                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                  title="Delete blog"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))
+          )}
+          {blogs.length > 5 && (
+            <Link
+              href="/blogs"
+              className="block px-5 py-3 text-center text-xs font-semibold text-blue-600 hover:bg-blue-50/40 transition-colors"
+            >
+              View all {blogs.length} blog posts →
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Add / Edit modal */}
