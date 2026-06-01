@@ -232,25 +232,42 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     addNote(lead.id, text, author);
   };
 
+  // Navigates the browser to a pipeline page. Uses location.assign for a hard
+  // load (replace was hiding the back-to-detail history entry); wrapped in a
+  // micro-task so React can flush the modal close before the unload happens.
+  const goToPipeline = (status: string) => {
+    Promise.resolve().then(() => {
+      window.location.assign(`/leads/${status}`);
+    });
+  };
+
   const changeStatus = (newStatus: LeadStatus, label: string) => {
     setConfirm({
       message: `Are you sure you want to change status to ${label}?`,
       action: async () => {
-        await updateLead(lead.id, { status: newStatus });
+        // Close the confirm dialog first so the modal doesn't linger during
+        // the await — then persist the change and finally jump to the new
+        // status's pipeline page so the user sees the lead in its new bucket.
         setConfirm(null);
-        // Full navigation to the matching pipeline page — forces a fresh
-        // load so the table reflects the latest backend state.
-        window.location.href = `/leads/${newStatus}`;
+        try {
+          await updateLead(lead.id, { status: newStatus });
+        } finally {
+          goToPipeline(newStatus);
+        }
       },
     });
   };
 
   const handleFollowUp = async (date: string) => {
+    setShowFollowUp(false);
     const n = new Date();
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
     const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
-    await updateLead(lead.id, { status, followUpDate: date });
-    window.location.href = `/leads/${status}`;
+    try {
+      await updateLead(lead.id, { status, followUpDate: date });
+    } finally {
+      goToPipeline(status);
+    }
   };
 
   const handleDelete = () => {
