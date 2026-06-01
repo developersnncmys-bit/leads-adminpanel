@@ -1,9 +1,9 @@
 'use client';
 
-import { X, AlertCircle, CalendarCheck, ArrowRight } from 'lucide-react';
+import { X, AlertCircle, CalendarCheck, UserPlus, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-type NotifType = 'overdue' | 'today';
+type NotifType = 'new' | 'overdue' | 'today';
 
 interface Notification {
   id: string;
@@ -19,6 +19,14 @@ interface Props {
 }
 
 const SECTION_META: Record<NotifType, { label: string; icon: React.ElementType; dot: string; bg: string; color: string; border: string }> = {
+  new: {
+    label: 'New Leads',
+    icon: UserPlus,
+    dot: 'bg-blue-500',
+    bg: 'bg-blue-50',
+    color: 'text-blue-700',
+    border: 'border-blue-100',
+  },
   overdue: {
     label: 'Overdue Follow-ups',
     icon: AlertCircle,
@@ -38,6 +46,7 @@ const SECTION_META: Record<NotifType, { label: string; icon: React.ElementType; 
 };
 
 export default function NotificationsModal({ notifications, onClose }: Props) {
+  const fresh = notifications.filter((n) => n.type === 'new');
   const overdue = notifications.filter((n) => n.type === 'overdue');
   const today = notifications.filter((n) => n.type === 'today');
 
@@ -80,6 +89,11 @@ export default function NotificationsModal({ notifications, onClose }: Props) {
             </div>
           ) : (
             <div className="p-3 space-y-3">
+
+              {/* New leads section */}
+              {fresh.length > 0 && (
+                <Section type="new" items={fresh} onClose={onClose} />
+              )}
 
               {/* Overdue section */}
               {overdue.length > 0 && (
