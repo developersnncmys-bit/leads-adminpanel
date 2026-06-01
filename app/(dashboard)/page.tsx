@@ -92,9 +92,19 @@ export default function DashboardPage() {
     { label: 'Dead Leads', value: stats.dead, color: '#d1d5db' },
   ];
 
-  const serviceCounts: Record<string, number> = {};
-  leads.forEach((l) => { serviceCounts[l.service] = (serviceCounts[l.service] || 0) + 1; });
-  const categoryData = Object.entries(serviceCounts).map(([name, count]) => ({ name, count }));
+  // Track total + converted per service so we can show the conversion rate
+  // (converted / total) instead of just the share of total leads.
+  const serviceStats: Record<string, { count: number; converted: number }> = {};
+  leads.forEach((l) => {
+    if (!serviceStats[l.service]) serviceStats[l.service] = { count: 0, converted: 0 };
+    serviceStats[l.service].count++;
+    if (l.status === 'converted') serviceStats[l.service].converted++;
+  });
+  const categoryData = Object.entries(serviceStats).map(([name, s]) => ({
+    name,
+    count: s.count,
+    converted: s.converted,
+  }));
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const now = new Date();
@@ -192,9 +202,11 @@ export default function DashboardPage() {
           <div className="space-y-5 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
             {categoryData
               .sort((a, b) => b.count - a.count)
-              .map((item, index, arr) => {
-                const max = arr[0].count;
-                const pct = total > 0 ? ((item.count / total) * 100).toFixed(1) : '0.0';
+              .map((item) => {
+                // Conversion rate within this service — i.e. of all the leads
+                // for `item.name`, what fraction reached the `converted` status.
+                const conversionPct = item.count > 0 ? (item.converted / item.count) * 100 : 0;
+                const pctLabel = conversionPct.toFixed(1);
 
                 return (
                   <div key={item.name} className="group cursor-pointer category-card">
@@ -206,15 +218,15 @@ export default function DashboardPage() {
                         </span>
                       </div>
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-sm font-bold text-gray-900">{item.count}</span>
-                        <span className="text-xs text-gray-400 tabular-nums">({pct}%)</span>
+                        <span className="text-sm font-bold text-gray-900">{item.converted}/{item.count}</span>
+                        <span className="text-xs text-emerald-600 tabular-nums">{pctLabel}% converted</span>
                       </div>
                     </div>
 
                     <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
-                        style={{ width: `${(item.count / max) * 100}%` }}
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-600 transition-all duration-500"
+                        style={{ width: `${conversionPct}%` }}
                       />
                     </div>
                   </div>
