@@ -40,8 +40,10 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       setAllLeads(await api.listLeads());
-    } catch (err) {
-      console.error('Failed to load leads:', err);
+    } catch {
+      // Silent — keep showing the leads we already have. Console.error here
+      // would trigger Next.js's dev runtime overlay on every poll cycle
+      // whenever the API is briefly unreachable (cold start, offline, etc).
     } finally {
       setLoading(false);
     }
@@ -50,10 +52,11 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   // Poll the API every 30 seconds so new website leads appear in the admin
-  // panel without requiring a manual refresh. The Header watches the leads
-  // list for unseen ids and plays a notification sound when they arrive.
+  // panel without requiring a manual refresh. .catch() is defensive: refresh
+  // already swallows its own errors, but we never want the unawaited promise
+  // here to surface as an unhandled rejection.
   useEffect(() => {
-    const id = setInterval(() => { refresh(); }, 30_000);
+    const id = setInterval(() => { refresh().catch(() => {}); }, 30_000);
     return () => clearInterval(id);
   }, [refresh]);
 
