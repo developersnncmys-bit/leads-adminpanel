@@ -232,42 +232,42 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     addNote(lead.id, text, author);
   };
 
-  // Navigates the browser to a pipeline page. Uses location.assign for a hard
-  // load (replace was hiding the back-to-detail history entry); wrapped in a
-  // micro-task so React can flush the modal close before the unload happens.
+  // Navigates to a pipeline page. Tries the Next router first (SPA, keeps the
+  // context state we just optimistically updated so the destination shows the
+  // lead immediately). Falls back to a hard navigation 250ms later if the URL
+  // hasn't actually changed — protects against any router-replace race.
   const goToPipeline = (status: string) => {
-    Promise.resolve().then(() => {
-      window.location.assign(`/leads/${status}`);
-    });
+    const target = `/leads/${status}`;
+    router.replace(target);
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.location.pathname !== target) {
+        window.location.assign(target);
+      }
+    }, 250);
   };
 
   const changeStatus = (newStatus: LeadStatus, label: string) => {
     setConfirm({
       message: `Are you sure you want to change status to ${label}?`,
-      action: async () => {
-        // Close the confirm dialog first so the modal doesn't linger during
-        // the await — then persist the change and finally jump to the new
-        // status's pipeline page so the user sees the lead in its new bucket.
+      action: () => {
+        // Close the modal, kick off the optimistic update (and background API
+        // PATCH), then jump to the matching pipeline page. Doing this in a
+        // single synchronous tick avoids the await/promise races we hit
+        // earlier where the navigation appeared to "snap back" to /leads/new.
         setConfirm(null);
-        try {
-          await updateLead(lead.id, { status: newStatus });
-        } finally {
-          goToPipeline(newStatus);
-        }
+        updateLead(lead.id, { status: newStatus });
+        goToPipeline(newStatus);
       },
     });
   };
 
-  const handleFollowUp = async (date: string) => {
+  const handleFollowUp = (date: string) => {
     setShowFollowUp(false);
     const n = new Date();
     const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
     const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
-    try {
-      await updateLead(lead.id, { status, followUpDate: date });
-    } finally {
-      goToPipeline(status);
-    }
+    updateLead(lead.id, { status, followUpDate: date });
+    goToPipeline(status);
   };
 
   const handleDelete = () => {
