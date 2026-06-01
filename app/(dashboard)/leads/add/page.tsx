@@ -7,6 +7,7 @@ import { SERVICES, DISTRICTS, LEAD_SOURCES } from '@/lib/constants';
 import { MOCK_USERS } from '@/lib/mockData';
 import type { User, Lead } from '@/lib/types';
 import { useAddLead } from '@/context/AddLeadContext';
+import { useAuthUser } from '@/lib/useAuthUser';
 
 interface FormData {
   name: string;
@@ -56,6 +57,7 @@ const inputCls = (err?: string) =>
 export default function AddLeadPage() {
   const router = useRouter();
   const { addLead } = useAddLead();
+  const auth = useAuthUser();
   const [form, setForm] = useState<FormData>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [loading, setLoading] = useState(false);
@@ -102,7 +104,11 @@ export default function AddLeadPage() {
       amount: Number(form.amount) || 0,
       address: form.address,
       source: form.source,
-      assignedTo: form.assignedTo || 'Unassigned',
+      // Pick what was typed; if blank, employees default to themselves so the
+      // lead lands in their own visible list; admins fall back to Unassigned.
+      assignedTo:
+        form.assignedTo
+        || (auth.role === 'employee' && auth.name ? auth.name : 'Unassigned'),
       followUpDate: form.followUpDate,
       status: 'new',
       paymentStatus: 'unpaid',

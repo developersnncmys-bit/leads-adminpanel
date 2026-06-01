@@ -10,6 +10,7 @@ import { SERVICES } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { useAddLead } from '@/context/AddLeadContext';
 import PaymentBadge from './PaymentBadge';
+import ServiceBadge from './ServiceBadge';
 import Pagination from '../Pagination';
 
 const PAGE_SIZE = 10;
@@ -338,8 +339,8 @@ export default function LeadTable({ leads }: Props) {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
                   <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{lead.district}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700 max-w-40">
-                    <span className="truncate block" title={lead.service}>{lead.service}</span>
+                  <td className="px-4 py-3 text-sm max-w-44">
+                    <ServiceBadge service={lead.service} />
                   </td>
                   <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
                     ₹{lead.amount.toLocaleString('en-IN')}
@@ -394,8 +395,8 @@ export default function LeadTable({ leads }: Props) {
                 </div>
                 <PaymentBadge status={lead.paymentStatus} />
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-gray-500">
-                <span><span className="font-medium text-gray-700">Service:</span> {lead.service}</span>
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500">
+                <ServiceBadge service={lead.service} />
                 <span><span className="font-medium text-gray-700">District:</span> {lead.district}</span>
                 <span><span className="font-medium text-gray-700">Amount:</span> ₹{lead.amount.toLocaleString('en-IN')}</span>
                 <span><span className="font-medium text-gray-700">Assigned:</span> {lead.assignedTo}</span>

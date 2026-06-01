@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, UserPlus, CheckCircle } from 'lucide-react';
 import { useAddLead } from '@/context/AddLeadContext';
+import { useAuthUser } from '@/lib/useAuthUser';
 import { SERVICES, LEAD_SOURCES } from '@/lib/constants';
 import type { Lead } from '@/lib/types';
 
@@ -52,6 +53,7 @@ const inputCls = (err?: string) =>
 
 export default function AddLeadModal() {
   const { open, closeModal, addLead, leads } = useAddLead();
+  const auth = useAuthUser();
   const [form, setForm] = useState<FormData>(INITIAL);
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [loading, setLoading] = useState(false);
@@ -112,7 +114,10 @@ export default function AddLeadModal() {
 
     source: form.source,
 
-    assignedTo: 'Unassigned',
+    // Employees who create a lead get it auto-assigned to themselves so it
+    // shows up in their own filtered list. Admins leave it Unassigned so
+    // they can pick the right employee from the lead's detail page later.
+    assignedTo: auth.role === 'employee' && auth.name ? auth.name : 'Unassigned',
 
     followUpDate: '',
 
