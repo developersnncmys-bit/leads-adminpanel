@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Search, Download, ChevronUp, ChevronDown, Filter, Trash2 } from 'lucide-react';
+import { Search, Download, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
 import { SERVICES } from '@/lib/constants';
@@ -161,22 +161,14 @@ export default function LeadTable({ leads }: Props) {
     a.click();
   };
 
-  const SortIcon = ({ col }: { col: keyof Lead }) =>
-    sortKey === col ? (
-      sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-    ) : (
-      <ChevronUp className="w-3 h-3 opacity-30" />
-    );
-
+  // Sort-arrow icons removed from the header — clicking the th still sorts,
+  // but the columns no longer carry a chevron indicator.
   const Th = ({ col, label, className = '' }: { col: keyof Lead; label: string; className?: string }) => (
     <th
       onClick={() => handleSort(col)}
-      className={`px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700 transition-colors whitespace-nowrap ${className}`}
+      className={`px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${className}`}
     >
-      <div className="flex items-center gap-1">
-        {label}
-        <SortIcon col={col} />
-      </div>
+      {label}
     </th>
   );
 
@@ -296,8 +288,8 @@ export default function LeadTable({ leads }: Props) {
               <Th col="district" label="District" />
               <Th col="service" label="Service" />
               <Th col="amount" label="Amount" />
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
-              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned To</th>
+              <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
+              <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned To</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -326,9 +318,9 @@ export default function LeadTable({ leads }: Props) {
                       className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
                     />
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 font-medium">{index + 1}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{formatDate(lead.date)}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{lead.time || '—'}</td>
+                  <td className="px-3 py-2.5text-sm text-gray-500 font-medium">{index + 1}</td>
+                  <td className="px-3 py-2.5text-sm text-gray-600 whitespace-nowrap">{formatDate(lead.date)}</td>
+                  <td className="px-3 py-2.5text-sm text-gray-600 whitespace-nowrap">{lead.time || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -337,12 +329,12 @@ export default function LeadTable({ leads }: Props) {
                       <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{lead.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">{lead.district}</td>
-                  <td className="px-4 py-3 text-sm max-w-44">
+                  <td className="px-3 py-2.5text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
+                  <td className="px-3 py-2.5text-sm text-gray-600 whitespace-nowrap">{lead.district}</td>
+                  <td className="px-3 py-2.5text-sm max-w-44">
                     <ServiceBadge service={lead.service} />
                   </td>
-                  <td className="px-4 py-3 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  <td className="px-3 py-2.5text-sm font-semibold text-gray-900 whitespace-nowrap">
                     ₹{lead.amount.toLocaleString('en-IN')}
                   </td>
                   <td className="px-4 py-3">

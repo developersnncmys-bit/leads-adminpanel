@@ -31,7 +31,11 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
-      <div className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl min-h-[42px] break-words">
+      {/* select-all + cursor-text → a single click highlights the whole value
+          so the user can press Ctrl+C to copy. Not editable. */}
+      <div
+        className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl min-h-[42px] break-words select-all cursor-text hover:bg-white hover:border-gray-300 transition-colors"
+      >
         {value}
       </div>
     </div>
