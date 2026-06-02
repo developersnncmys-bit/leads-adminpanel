@@ -5,7 +5,7 @@ import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Phone, Mail, MessageSquare, Send, X, Calendar,
-  Trash2, Clock, Plus, User,
+  Trash2, Clock, Plus, User, IndianRupee,
 } from 'lucide-react';
 import { MOCK_USERS } from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
@@ -144,6 +144,57 @@ function CommentModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (t
   );
 }
 
+/* ─── Refund amount modal ──────────────────────────────────────── */
+function RefundModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (amount: number) => void }) {
+  const [amount, setAmount] = useState('');
+  const value = Number(amount);
+  const valid = amount.trim() !== '' && Number.isFinite(value) && value > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-rose-50 rounded-xl flex items-center justify-center">
+              <IndianRupee className="w-4 h-4 text-rose-600" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900">Process Refund</h3>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <X className="w-4 h-4 text-gray-500" />
+          </button>
+        </div>
+        <div className="p-5">
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Refund amount (₹)</label>
+          <input
+            autoFocus
+            type="number"
+            min={1}
+            placeholder="Enter amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+          />
+          <p className="text-xs text-gray-400 mt-2">A note will be added to the lead's activity feed for the audit trail.</p>
+        </div>
+        <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-50">
+          <button onClick={onClose} className="px-5 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">
+            Cancel
+          </button>
+          <button
+            disabled={!valid}
+            onClick={() => { if (valid) { onSubmit(value); onClose(); } }}
+            className="px-5 py-2 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
+          >
+            Confirm Refund
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Follow-up date modal ──────────────────────────────────────── */
 function FollowUpModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (date: string) => void }) {
   const [date, setDate] = useState('');
@@ -215,6 +266,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
   const [showComment, setShowComment] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
+  const [showRefund, setShowRefund] = useState(false);
   const [confirm, setConfirm] = useState<{ message: string; action: () => void } | null>(null);
   const [employees, setEmployees] = useState<string[]>(() =>
     MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
@@ -278,6 +330,18 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
     await updateLead(lead.id, { status, followUpDate: date });
     goBack();
+  };
+
+  // Record a refund — stamps lead.refundAmount AND drops a note into the
+  // activity feed so the audit trail is preserved even if the field isn't
+  // persisted by the backend.
+  const handleRefund = (amount: number) => {
+    const author =
+      lead.assignedTo && lead.assignedTo !== 'Unassigned'
+        ? lead.assignedTo
+        : auth.name || 'Admin';
+    addNote(lead.id, `Refund of ₹${amount.toLocaleString('en-IN')} processed.`, author);
+    updateLead(lead.id, { refundAmount: amount });
   };
 
   const handleDelete = () => {
@@ -383,7 +447,15 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
             {[
               { label: 'Amount',  value: lead.amount > 0 ? `₹${lead.amount.toLocaleString('en-IN')}` : '—' },
-              { label: 'Payment', value: lead.paymentStatus === 'paid' ? 'Paid' : 'Unpaid' },
+              {
+                label: 'Payment',
+                value:
+                  lead.refundAmount && lead.refundAmount > 0
+                    ? `Refunded ₹${lead.refundAmount.toLocaleString('en-IN')}`
+                    : lead.paymentStatus === 'paid'
+                      ? 'Paid'
+                      : 'Unpaid',
+              },
               { label: 'Source',  value: lead.source || '—' },
               { label: 'Date',    value: formatDate(lead.date) },
             ].map(({ label, value }) => (
@@ -423,6 +495,12 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               <Calendar className="w-3.5 h-3.5" /> Follow Up
             </button>
           )}
+          {/* Refund — opens a modal that asks for an amount, records a note
+              and stamps the lead's refundAmount. Always available. */}
+          <button onClick={() => setShowRefund(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:bg-rose-100 shadow-sm transition-all">
+            <IndianRupee className="w-3.5 h-3.5" /> Refund
+          </button>
 
           <div className="w-px h-5 bg-gray-200" />
 
@@ -535,6 +613,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
       {showComment  && <CommentModal  onClose={() => setShowComment(false)}  onSubmit={addComment} />}
       {showFollowUp && <FollowUpModal onClose={() => setShowFollowUp(false)} onSubmit={handleFollowUp} />}
+      {showRefund   && <RefundModal   onClose={() => setShowRefund(false)}   onSubmit={handleRefund} />}
       {confirm      && <ConfirmModal  message={confirm.message} onConfirm={confirm.action} onCancel={() => setConfirm(null)} />}
     </div>
   );

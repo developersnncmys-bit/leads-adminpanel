@@ -33,6 +33,9 @@ export interface Lead {
   // Mirrors assignedTo at creation time, but stays put if admin reassigns
   // the lead later — so the original creator is always recoverable.
   createdBy?: string;
+  // Last refund recorded for this lead (₹). A note is added alongside for
+  // an audit trail, but the field gives a quick numeric indicator.
+  refundAmount?: number;
   // website-lead specific fields
   leadType?: 'website' | 'manual';
   time?: string;
