@@ -118,6 +118,9 @@ export default function AddLeadModal() {
     // shows up in their own filtered list. Admins leave it Unassigned so
     // they can pick the right employee from the lead's detail page later.
     assignedTo: auth.role === 'employee' && auth.name ? auth.name : 'Unassigned',
+    // Always record who created the lead so admins can see this on the
+    // detail page even if assignedTo is changed later.
+    createdBy: auth.name || 'Admin',
 
     followUpDate: '',
 

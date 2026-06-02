@@ -351,6 +351,13 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
                         <User className="w-3.5 h-3.5 text-slate-500" />{lead.assignedTo}
                       </span>
                     )}
+                    {/* Original creator — useful when admin reassigns later. */}
+                    {lead.createdBy && lead.createdBy !== lead.assignedTo && (
+                      <span className="flex items-center gap-1.5 text-sm text-slate-400">
+                        <User className="w-3.5 h-3.5 text-slate-500" />
+                        Created by {lead.createdBy}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

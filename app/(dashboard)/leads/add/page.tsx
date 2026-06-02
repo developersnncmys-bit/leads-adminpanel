@@ -109,6 +109,9 @@ export default function AddLeadPage() {
       assignedTo:
         form.assignedTo
         || (auth.role === 'employee' && auth.name ? auth.name : 'Unassigned'),
+      // Always record the actual creator separate from the (mutable)
+      // assignedTo field so admins can trace who originated the lead.
+      createdBy: auth.name || 'Admin',
       followUpDate: form.followUpDate,
       status: 'new',
       paymentStatus: 'unpaid',

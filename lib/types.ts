@@ -29,6 +29,10 @@ export interface Lead {
   notes: Note[];
   followUpDate?: string;
   createdAt: string;
+  // Name of the logged-in user who created this lead from the admin panel.
+  // Mirrors assignedTo at creation time, but stays put if admin reassigns
+  // the lead later — so the original creator is always recoverable.
+  createdBy?: string;
   // website-lead specific fields
   leadType?: 'website' | 'manual';
   time?: string;
