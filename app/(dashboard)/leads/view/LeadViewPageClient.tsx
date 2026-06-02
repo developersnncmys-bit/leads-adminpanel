@@ -32,9 +32,11 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     <div>
       <label className="block text-xs font-medium text-gray-500 mb-1.5">{label}</label>
       {/* select-all + cursor-text → a single click highlights the whole value
-          so the user can press Ctrl+C to copy. Not editable. */}
+          so the user can press Ctrl+C to copy. Not editable. Displayed in
+          uppercase per requirement; the underlying text node still holds the
+          original casing so copy/paste yields the source string unchanged. */}
       <div
-        className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl min-h-[42px] break-words select-all cursor-text hover:bg-white hover:border-gray-300 transition-colors"
+        className="w-full px-3 py-2.5 text-sm text-gray-900 bg-gray-50 border border-gray-200 rounded-xl min-h-[42px] break-words select-all cursor-text uppercase hover:bg-white hover:border-gray-300 transition-colors"
       >
         {value}
       </div>
@@ -337,27 +339,27 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h1 className="text-xl font-bold text-white leading-tight">{lead.name || '—'}</h1>
-                  <p className="text-slate-400 text-sm mt-0.5">{lead.service}</p>
+                  <h1 className="text-xl font-bold text-white leading-tight uppercase">{lead.name || '—'}</h1>
+                  <p className="text-slate-400 text-sm mt-0.5 uppercase">{lead.service}</p>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2.5">
                     {lead.mobileNumber && (
-                      <a href={`tel:${lead.mobileNumber}`} className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white transition-colors">
+                      <a href={`tel:${lead.mobileNumber}`} className="flex items-center gap-1.5 text-sm text-slate-300 hover:text-white transition-colors uppercase">
                         <Phone className="w-3.5 h-3.5 text-slate-500" />{lead.mobileNumber}
                       </a>
                     )}
                     {lead.email && (
-                      <span className="flex items-center gap-1.5 text-sm text-slate-300">
+                      <span className="flex items-center gap-1.5 text-sm text-slate-300 uppercase">
                         <Mail className="w-3.5 h-3.5 text-slate-500" />{lead.email}
                       </span>
                     )}
                     {lead.assignedTo && lead.assignedTo !== 'Unassigned' && (
-                      <span className="flex items-center gap-1.5 text-sm text-slate-300">
+                      <span className="flex items-center gap-1.5 text-sm text-slate-300 uppercase">
                         <User className="w-3.5 h-3.5 text-slate-500" />{lead.assignedTo}
                       </span>
                     )}
                     {/* Original creator — useful when admin reassigns later. */}
                     {lead.createdBy && lead.createdBy !== lead.assignedTo && (
-                      <span className="flex items-center gap-1.5 text-sm text-slate-400">
+                      <span className="flex items-center gap-1.5 text-sm text-slate-400 uppercase">
                         <User className="w-3.5 h-3.5 text-slate-500" />
                         Created by {lead.createdBy}
                       </span>
@@ -387,7 +389,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             ].map(({ label, value }) => (
               <div key={label} className="bg-white/5 rounded-xl px-3.5 py-2.5 border border-white/10">
                 <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{label}</p>
-                <p className="text-sm font-semibold text-white mt-0.5 truncate">{value}</p>
+                <p className="text-sm font-semibold text-white mt-0.5 truncate uppercase">{value}</p>
               </div>
             ))}
           </div>
