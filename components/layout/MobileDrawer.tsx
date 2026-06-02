@@ -61,7 +61,7 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
 
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5 min-w-0">
-            <img src="/logo.png" alt="Make My Documents" width={32} height={32} className="rounded-lg flex-shrink-0 object-contain bg-white" />
+            <img src="/logo.svg" alt="Make My Documents" width={32} height={32} className="flex-shrink-0 object-contain" />
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 truncate">Make My Documents</p>
               <p className="text-[10px] text-gray-400 uppercase tracking-widest">CRM</p>

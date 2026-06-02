@@ -39,7 +39,7 @@ export default function Sidebar() {
 
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 h-16 border-b border-gray-100 flex-shrink-0">
-        <img src="/logo.png" alt="Make My Documents" width={32} height={32} className="rounded-lg flex-shrink-0 object-contain bg-white" />
+        <img src="/logo.svg" alt="Make My Documents" width={32} height={32} className="flex-shrink-0 object-contain" />
         <div>
           <p className="text-sm font-bold text-gray-900 leading-tight">Make My Documents</p>
           <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">CRM</p>
