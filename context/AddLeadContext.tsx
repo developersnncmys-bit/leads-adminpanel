@@ -60,6 +60,21 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(id);
   }, [refresh]);
 
+  // Browsers throttle setInterval in backgrounded tabs, so when the admin
+  // panel tab regains focus we kick a one-shot refresh immediately. That
+  // way switching back from another tab always shows the latest leads.
+  useEffect(() => {
+    const onVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refresh().catch(() => {});
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisible);
+      return () => document.removeEventListener('visibilitychange', onVisible);
+    }
+  }, [refresh]);
+
   const addLead = async (lead: Lead) => {
     try {
       const created = await api.createLead(lead);

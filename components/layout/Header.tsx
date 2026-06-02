@@ -44,16 +44,30 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         if (Ctx) {
           const ctx = new Ctx();
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.type = 'sine';
-          osc.frequency.value = 880;
-          gain.gain.setValueAtTime(0.25, ctx.currentTime);
-          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
-          osc.start();
-          osc.stop(ctx.currentTime + 0.45);
+          // If the tab was backgrounded the context may be suspended — resume
+          // it so the chime is audible when the user is on a different tab.
+          if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+          const playNote = (freq: number, startOffset: number, duration: number) => {
+            const startAt = ctx.currentTime + startOffset;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.0001, startAt);
+            gain.gain.linearRampToValueAtTime(0.28, startAt + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, startAt + duration);
+            osc.start(startAt);
+            osc.stop(startAt + duration);
+          };
+
+          // Pleasant 3-note arpeggio (C5 → E5 → G5) — recognizable as a
+          // notification chime even when the tab is in the background.
+          playNote(523.25, 0,    0.40);
+          playNote(659.25, 0.13, 0.40);
+          playNote(783.99, 0.26, 0.55);
         }
       } catch {
         // Browser may block audio before the user interacts — silent fallback.
