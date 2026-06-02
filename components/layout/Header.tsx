@@ -112,11 +112,16 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   });
 
   const results = search.length > 1
-    ? leads.filter(
-        (l) =>
-          l.name.toLowerCase().includes(search.toLowerCase()) ||
-          l.mobileNumber.includes(search)
-      ).slice(0, 5)
+    ? leads.filter((l) => {
+        const q = search.toLowerCase();
+        return (
+          l.name.toLowerCase().includes(q) ||
+          l.mobileNumber.includes(search) ||
+          (l.orderId && l.orderId.toLowerCase().includes(q)) ||
+          (l.service && l.service.toLowerCase().includes(q)) ||
+          (l.email && l.email.toLowerCase().includes(q))
+        );
+      }).slice(0, 5)
     : [];
 
   const notifications = [
@@ -161,7 +166,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search leads..."
+            placeholder="Search by name, mobile, order id or service..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
             onFocus={() => search.length > 1 && setShowResults(true)}
@@ -180,9 +185,12 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                   <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-xs font-bold">{lead.name[0]}</span>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">{lead.name}</p>
-                    <p className="text-xs text-gray-400">{lead.mobileNumber} · {lead.service}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{lead.name}</p>
+                    <p className="text-xs text-gray-400 truncate">
+                      {lead.mobileNumber} · {lead.service}
+                      {lead.orderId ? ` · ${lead.orderId}` : ''}
+                    </p>
                   </div>
                 </Link>
               ))}
