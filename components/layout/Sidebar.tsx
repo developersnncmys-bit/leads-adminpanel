@@ -41,14 +41,9 @@ export default function Sidebar() {
       {/* Brand: document SVG + "Make My Documents" wordmark. Sized so it lines
           up with the sticky top header bar (also h-20). */}
       <div className="flex items-center gap-3 px-4 h-20 border-b border-gray-100 flex-shrink-0">
-        <img src="/logo.png" alt="MakeMyDocuments" className="h-12 w-12 flex-shrink-0 object-contain" />
+        <img src="/logo.svg" alt="MakeMyDocuments" className="h-12 w-12 flex-shrink-0 object-contain" />
         <div className="min-w-0">
-          {/* Wordmark split into the two logo colours — amber for the orange
-              back document, blue for the blue front document. */}
-          <p className="text-[15px] font-bold leading-tight">
-            <span className="text-amber-500">Make My</span>{' '}
-            <span className="text-blue-600">Documents</span>
-          </p>
+          <p className="text-[15px] font-bold text-gray-900 leading-tight">Make My Documents</p>
           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mt-0.5">CRM</p>
         </div>
       </div>
