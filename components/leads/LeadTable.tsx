@@ -166,7 +166,7 @@ export default function LeadTable({ leads }: Props) {
   const Th = ({ col, label, className = '' }: { col: keyof Lead; label: string; className?: string }) => (
     <th
       onClick={() => handleSort(col)}
-      className={`px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${className}`}
+      className={`px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider cursor-pointer select-none hover:text-gray-900 transition-colors whitespace-nowrap ${className}`}
     >
       {label}
     </th>
@@ -280,15 +280,15 @@ export default function LeadTable({ leads }: Props) {
                   className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
                 />
               </th>
-              <Th col="slNo" label="Sl.No" className="w-14" />
-              <Th col="date" label="Date" />
+              <Th col="slNo" label="#" className="w-10 hidden xl:table-cell" />
+              <Th col="date" label="Date" className="hidden lg:table-cell" />
               <Th col="name" label="Name" />
               <Th col="mobileNumber" label="Mobile" />
               <Th col="district" label="District" className="hidden xl:table-cell" />
               <Th col="service" label="Service" />
-              <Th col="amount" label="Amount" />
-              <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
-              <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned To</th>
+              <Th col="amount" label="Amount" className="hidden lg:table-cell" />
+              <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
+              <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -317,32 +317,32 @@ export default function LeadTable({ leads }: Props) {
                       className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
                     />
                   </td>
-                  <td className="px-3 py-2.5 text-sm text-gray-500 font-medium">{index + 1}</td>
-                  <td className="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(lead.date)}</td>
-                  <td className="px-3 py-2.5">
-                    <div className="flex items-center gap-2">
+                  <td className="px-2 py-2 text-xs text-gray-500 font-medium hidden xl:table-cell">{index + 1}</td>
+                  <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
+                  <td className="px-2 py-2">
+                    <div className="flex items-center gap-2 min-w-0">
                       <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-blue-600 text-xs font-bold">{lead.name[0]}</span>
                       </div>
-                      <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{lead.name}</span>
+                      <span className="text-sm font-semibold text-gray-900 truncate">{lead.name}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5 text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
-                  <td className="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
-                  <td className="px-3 py-2.5 text-sm max-w-44">
+                  <td className="px-2 py-2 text-xs text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
+                  <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
+                  <td className="px-2 py-2 max-w-[10rem]">
                     <ServiceBadge service={lead.service} />
                   </td>
-                  <td className="px-3 py-2.5 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  <td className="px-2 py-2 text-xs font-semibold text-gray-900 whitespace-nowrap hidden lg:table-cell">
                     ₹{lead.amount.toLocaleString('en-IN')}
                   </td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-2 py-2">
                     <PaymentBadge status={lead.paymentStatus} />
                   </td>
-                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                     <select
                       value={lead.assignedTo || 'Unassigned'}
                       onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer"
+                      className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[8rem]"
                     >
                       <option value="Unassigned">Select assigned user</option>
                       {employees.map((emp) => (
