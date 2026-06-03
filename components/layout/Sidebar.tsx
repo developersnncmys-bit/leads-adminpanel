@@ -38,10 +38,14 @@ export default function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
 
       {/* Logo — match the login-page logo (no sidebar text) */}
-      <div className="flex items-center justify-center px-4 h-32 border-b border-gray-100 flex-shrink-0">
-        {/* Document-only SVG (orange + blue documents, no TM / text). Sized so
-            it never overflows wider than the nav items below. */}
-        <img src="/logo.svg" alt="MakeMyDocuments" className="h-28 w-28 object-contain" />
+      {/* Brand: document SVG + "Make My Documents" wordmark. Sized so it lines
+          up with the sticky top header bar (also h-20). */}
+      <div className="flex items-center gap-3 px-4 h-20 border-b border-gray-100 flex-shrink-0">
+        <img src="/logo.svg" alt="MakeMyDocuments" className="h-12 w-12 flex-shrink-0 object-contain" />
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold text-gray-900 leading-tight">Make My Documents</p>
+          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mt-0.5">CRM</p>
+        </div>
       </div>
 
       {/* Nav */}
