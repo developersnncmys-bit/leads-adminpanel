@@ -149,9 +149,9 @@ export default function LeadTable({ leads }: Props) {
   useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
   const downloadCSV = () => {
-    const headers = ['Sl.No', 'Date', 'Time', 'Name', 'Mobile', 'District', 'Service', 'Amount', 'Payment', 'Assigned To'];
+    const headers = ['Sl.No', 'Date', 'Name', 'Mobile', 'District', 'Service', 'Amount', 'Payment', 'Assigned To'];
     const rows = filtered.map((l, i) => [
-      i + 1, l.date, l.time || '', l.name, l.mobileNumber, l.district, l.service,
+      i + 1, l.date, l.name, l.mobileNumber, l.district, l.service,
       l.amount, l.paymentStatus, l.assignedTo,
     ]);
     const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
@@ -282,10 +282,9 @@ export default function LeadTable({ leads }: Props) {
               </th>
               <Th col="slNo" label="Sl.No" className="w-14" />
               <Th col="date" label="Date" />
-              <Th col="time" label="Time" />
               <Th col="name" label="Name" />
               <Th col="mobileNumber" label="Mobile" />
-              <Th col="district" label="District" />
+              <Th col="district" label="District" className="hidden xl:table-cell" />
               <Th col="service" label="Service" />
               <Th col="amount" label="Amount" />
               <th className="px-3 py-2.5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
@@ -295,7 +294,7 @@ export default function LeadTable({ leads }: Props) {
           <tbody className="divide-y divide-gray-50">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={11} className="px-4 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">
                   No leads found matching your search.
                 </td>
               </tr>
@@ -318,10 +317,9 @@ export default function LeadTable({ leads }: Props) {
                       className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
                     />
                   </td>
-                  <td className="px-3 py-2.5text-sm text-gray-500 font-medium">{index + 1}</td>
-                  <td className="px-3 py-2.5text-sm text-gray-600 whitespace-nowrap">{formatDate(lead.date)}</td>
-                  <td className="px-3 py-2.5text-sm text-gray-600 whitespace-nowrap">{lead.time || '—'}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2.5 text-sm text-gray-500 font-medium">{index + 1}</td>
+                  <td className="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap">{formatDate(lead.date)}</td>
+                  <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-blue-600 text-xs font-bold">{lead.name[0]}</span>
@@ -329,18 +327,18 @@ export default function LeadTable({ leads }: Props) {
                       <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{lead.name}</span>
                     </div>
                   </td>
-                  <td className="px-3 py-2.5text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
-                  <td className="px-3 py-2.5text-sm text-gray-600 whitespace-nowrap">{lead.district}</td>
-                  <td className="px-3 py-2.5text-sm max-w-44">
+                  <td className="px-3 py-2.5 text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
+                  <td className="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
+                  <td className="px-3 py-2.5 text-sm max-w-44">
                     <ServiceBadge service={lead.service} />
                   </td>
-                  <td className="px-3 py-2.5text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-sm font-semibold text-gray-900 whitespace-nowrap">
                     ₹{lead.amount.toLocaleString('en-IN')}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-2.5">
                     <PaymentBadge status={lead.paymentStatus} />
                   </td>
-                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                     <select
                       value={lead.assignedTo || 'Unassigned'}
                       onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
@@ -393,7 +391,7 @@ export default function LeadTable({ leads }: Props) {
                 <span><span className="font-medium text-gray-700">Amount:</span> ₹{lead.amount.toLocaleString('en-IN')}</span>
                 <span><span className="font-medium text-gray-700">Assigned:</span> {lead.assignedTo}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-2">{formatDate(lead.date)}{lead.time ? ` · ${lead.time}` : ''}</p>
+              <p className="text-xs text-gray-400 mt-2">{formatDate(lead.date)}</p>
             </Link>
           ))
         )}
