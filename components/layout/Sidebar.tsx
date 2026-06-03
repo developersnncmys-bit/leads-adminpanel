@@ -39,10 +39,9 @@ export default function Sidebar() {
 
       {/* Logo — match the login-page logo (no sidebar text) */}
       <div className="flex items-center justify-center px-4 h-32 border-b border-gray-100 flex-shrink-0">
-        {/* w-44 caps the rendered width so the logo never overflows wider than
-            the nav items below (Dashboard / Add Lead etc.). object-contain
-            keeps the aspect ratio inside the 176 × 112 box. */}
-        <img src="/logo.png" alt="MakeMyDocuments" className="h-28 w-44 object-contain" />
+        {/* Document-only SVG (orange + blue documents, no TM / text). Sized so
+            it never overflows wider than the nav items below. */}
+        <img src="/logo.svg" alt="MakeMyDocuments" className="h-28 w-28 object-contain" />
       </div>
 
       {/* Nav */}
