@@ -38,8 +38,8 @@ export default function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
 
       {/* Logo — match the login-page logo (no sidebar text) */}
-      <div className="flex items-center justify-center px-4 h-20 border-b border-gray-100 flex-shrink-0">
-        <img src="/logo.png" alt="MakeMyDocuments" className="h-16 w-auto max-w-full object-contain" />
+      <div className="flex items-center justify-center px-3 h-24 border-b border-gray-100 flex-shrink-0">
+        <img src="/logo.png" alt="MakeMyDocuments" className="h-20 w-auto max-w-full object-contain" />
       </div>
 
       {/* Nav */}
