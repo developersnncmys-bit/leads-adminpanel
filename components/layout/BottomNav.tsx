@@ -2,25 +2,28 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, PlusCircle, Clock, UserCheck } from 'lucide-react';
+import {
+  LayoutDashboard, UserPlus, AlertCircle, PlusCircle,
+  CalendarCheck, Clock, CheckCircle,
+} from 'lucide-react';
 import { useAddLead } from '@/context/AddLeadContext';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { openModal } = useAddLead();
 
-  // Exact-match active state so each pipeline icon only highlights when the
-  // user is on its specific list page.
   const isActive = (href: string) => pathname === href;
 
+  // 3 items on the left, centre Add FAB, 3 on the right.
   const leftNav = [
-    { href: '/',          icon: LayoutDashboard, label: 'Home' },
-    { href: '/leads/new', icon: Users,           label: 'Leads' },
+    { href: '/',              icon: LayoutDashboard, label: 'Home' },
+    { href: '/leads/new',     icon: UserPlus,        label: 'New' },
+    { href: '/leads/overdue', icon: AlertCircle,     label: 'Overdue' },
   ];
-
   const rightNav = [
-    { href: '/leads/inprocess', icon: Clock,     label: 'In Process' },
-    { href: '/leads/followup',  icon: UserCheck, label: 'Follow Up' },
+    { href: '/leads/today',     icon: CalendarCheck, label: 'Today' },
+    { href: '/leads/inprocess', icon: Clock,         label: 'Process' },
+    { href: '/leads/converted', icon: CheckCircle,   label: 'Done' },
   ];
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
@@ -28,30 +31,32 @@ export default function BottomNav() {
     return (
       <Link
         href={href}
-        className={`flex flex-col items-center gap-1 px-1.5 py-1 rounded-xl transition-colors ${active ? 'text-blue-600' : 'text-gray-400'}`}
+        className={`flex flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-lg transition-colors min-w-0 flex-1 ${
+          active ? 'text-blue-600' : 'text-gray-400'
+        }`}
       >
-        <Icon className="w-5 h-5" />
-        <span className="text-[10px] font-medium whitespace-nowrap">{label}</span>
+        <Icon className="w-5 h-5 flex-shrink-0" />
+        <span className="text-[9px] font-medium whitespace-nowrap truncate w-full text-center">{label}</span>
       </Link>
     );
   };
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 safe-area-bottom">
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center h-16 px-1">
 
-        {/* Left: Home + Leads */}
+        {/* Left trio */}
         {leftNav.map((item) => <NavItem key={item.href} {...item} />)}
 
         {/* Centre FAB — Add Lead */}
-        <button onClick={openModal} className="flex flex-col items-center -mt-6 flex-shrink-0">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-300">
-            <PlusCircle className="w-6 h-6 text-white" />
+        <button onClick={openModal} className="flex flex-col items-center -mt-6 flex-shrink-0 px-1">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-300">
+            <PlusCircle className="w-5 h-5 text-white" />
           </div>
-          <span className="text-[10px] font-medium text-blue-600 mt-1">Add</span>
+          <span className="text-[9px] font-medium text-blue-600 mt-0.5">Add</span>
         </button>
 
-        {/* Right: In Process + Follow Up */}
+        {/* Right trio */}
         {rightNav.map((item) => <NavItem key={item.href} {...item} />)}
 
       </div>

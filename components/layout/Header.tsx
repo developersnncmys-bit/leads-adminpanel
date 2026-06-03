@@ -162,11 +162,11 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           <Menu className="w-5 h-5 text-gray-600" />
         </button>
 
-        <div className="flex-1 max-w-sm relative hidden sm:block">
+        <div className="flex-1 max-w-sm relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by name, mobile, order id or service..."
+            placeholder="Search leads..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
             onFocus={() => search.length > 1 && setShowResults(true)}
@@ -203,8 +203,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           )}
         </div>
 
-        <div className="flex-1" />
-
         {now && (
           <div className="hidden lg:flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
             <span>{dateStr}</span>
@@ -213,14 +211,14 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
 
           {/* <Link href="/settings" className="hidden lg:block p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
             <Settings className="w-[18px] h-[18px]" />
           </Link> */}
 
-          {/* Bell / mini dropdown */}
-          <div className="hidden lg:block relative" ref={notifRef}>
+          {/* Bell / mini dropdown — visible on all screens */}
+          <div className="relative" ref={notifRef}>
             <button
               onClick={() => setShowNotifications((v) => !v)}
               className="relative p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
