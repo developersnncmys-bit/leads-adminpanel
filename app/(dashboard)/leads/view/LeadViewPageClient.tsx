@@ -495,12 +495,6 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               <Calendar className="w-3.5 h-3.5" /> Follow Up
             </button>
           )}
-          {/* Refund — opens a modal that asks for an amount, records a note
-              and stamps the lead's refundAmount. Always available. */}
-          <button onClick={() => setShowRefund(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:bg-rose-100 shadow-sm transition-all">
-            <IndianRupee className="w-3.5 h-3.5" /> Refund
-          </button>
 
           <div className="w-px h-5 bg-gray-200" />
 
@@ -526,6 +520,14 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               Dead
             </button>
           )}
+
+          {/* Refund — opens a modal that asks for an amount, records a note
+              and stamps the lead's refundAmount. Sits at the end of the
+              action row, just before the Delete affordance. */}
+          <button onClick={() => setShowRefund(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:bg-rose-100 shadow-sm transition-all">
+            <IndianRupee className="w-3.5 h-3.5" /> Refund
+          </button>
 
           {/* Delete */}
           <div className="ml-auto">

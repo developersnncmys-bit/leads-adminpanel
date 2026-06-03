@@ -452,9 +452,36 @@ const LIFE_INSURANCE: ServiceSchema = [
   ],
 ];
 
-// Vehicle Insurance — two/four wheeler + commercial. vehicleType is only set
-// on the commercial form; it renders as — for the others.
+// Two-Wheeler / Four-Wheeler Insurance — they don't collect Vehicle Type,
+// so it's intentionally absent here (only the Commercial form asks for it).
 const VEHICLE_INSURANCE: ServiceSchema = [
+  ...META,
+  [
+    { label: 'Service', key: 'service' },
+    { label: 'Source',  key: 'source'  },
+    { label: 'Amount',  key: 'amount'  },
+  ],
+  ASSIGN_ROW,
+  [
+    { label: 'Intent',           key: 'intent',    source: 'formData' },
+    { label: 'Registration No.', key: 'regNumber', source: 'formData' },
+    { label: 'Registration Date', key: 'regDate',  source: 'formData' },
+  ],
+  [
+    { label: 'Address',  key: 'address'                     },
+    { label: 'State',    key: 'state',    source: 'formData' },
+    { label: 'District', key: 'district'                     },
+  ],
+  [
+    { label: 'Pin Code',      key: 'pinCode',     source: 'formData' },
+    { label: 'Email ID',      key: 'email'                          },
+    { label: 'Mobile Number', key: 'mobileNumber'                   },
+  ],
+];
+
+// Commercial Vehicle Insurance — same as the wheeler form but with the extra
+// Vehicle Type field (Truck / Van / Taxi / Bus / Tractor / Other).
+const COMMERCIAL_VEHICLE_INSURANCE: ServiceSchema = [
   ...META,
   [
     { label: 'Service', key: 'service' },
@@ -598,6 +625,11 @@ const CONTACT_US: ServiceSchema = [
   [
     { label: 'Mobile Number', key: 'mobileNumber' },
     { label: 'Email ID',      key: 'email'        },
+    { label: 'State',         key: 'state',    source: 'formData' },
+  ],
+  [
+    { label: 'District', key: 'district'                     },
+    { label: 'Pin Code', key: 'pinCode',  source: 'formData' },
     null,
   ],
 ];
@@ -616,6 +648,11 @@ const HOME_FORM: ServiceSchema = [
   ASSIGN_ROW,
   [
     { label: 'Mobile Number', key: 'mobileNumber' },
+    { label: 'State',         key: 'state',   source: 'formData' },
+    { label: 'District',      key: 'district'                    },
+  ],
+  [
+    { label: 'Pin Code', key: 'pinCode', source: 'formData' },
     null,
     null,
   ],
@@ -668,7 +705,8 @@ export function getSchema(input: Lead | string): ServiceSchema {
   if (s.includes('senior citizen'))             return SENIOR_CITIZEN_CARD;
   if (s.includes('health insurance'))           return HEALTH_INSURANCE;
   if (s.includes('life insurance'))             return LIFE_INSURANCE;
-  if (s.includes('wheeler insurance') || s.includes('commercial vehicle insurance')) return VEHICLE_INSURANCE;
+  if (s.includes('commercial vehicle insurance')) return COMMERCIAL_VEHICLE_INSURANCE;
+  if (s.includes('wheeler insurance'))            return VEHICLE_INSURANCE;
   if (s.includes('rental agreement'))           return RENTAL_AGREEMENT;
   if (s.includes('lease agreement'))            return LEASE_AGREEMENT;
   if (s.includes('insurance'))                  return INSURANCE;
