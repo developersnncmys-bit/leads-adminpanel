@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
-  Settings,
+  Settings, Zap,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
@@ -38,10 +38,11 @@ export default function Sidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
 
       {/* Logo — match the login-page logo (no sidebar text) */}
-      {/* Brand: document SVG + "Make My Documents" wordmark. Sized so it lines
-          up with the sticky top header bar (also h-20). */}
-      <div className="flex items-center gap-3 px-4 h-20 border-b border-gray-100 flex-shrink-0">
-        <img src="/logo.svg" alt="MakeMyDocuments" className="h-12 w-12 flex-shrink-0 object-contain" />
+      {/* Brand: blue-tile Zap icon + "Make My Documents" wordmark. */}
+      <div className="flex items-center gap-3 px-5 h-20 border-b border-gray-100 flex-shrink-0">
+        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-blue-200">
+          <Zap className="w-5 h-5 text-white" />
+        </div>
         <div className="min-w-0">
           <p className="text-[15px] font-bold text-gray-900 leading-tight">Make My Documents</p>
           <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest mt-0.5">CRM</p>
