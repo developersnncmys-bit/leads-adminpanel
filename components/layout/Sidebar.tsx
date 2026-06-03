@@ -37,13 +37,9 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
 
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 h-16 border-b border-gray-100 flex-shrink-0">
-        <img src="/logo.svg" alt="Make My Documents" width={32} height={32} className="flex-shrink-0 object-contain" />
-        <div>
-          <p className="text-sm font-bold text-gray-900 leading-tight">Make My Documents</p>
-          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-widest">CRM</p>
-        </div>
+      {/* Logo — match the login-page logo (no sidebar text) */}
+      <div className="flex items-center justify-center px-4 h-20 border-b border-gray-100 flex-shrink-0">
+        <img src="/logo.png" alt="MakeMyDocuments" className="h-16 w-auto max-w-full object-contain" />
       </div>
 
       {/* Nav */}

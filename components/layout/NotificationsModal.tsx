@@ -56,7 +56,7 @@ export default function NotificationsModal({ notifications, onClose }: Props) {
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
       {/* Panel — fixed top-right just below header */}
-      <div className="fixed top-[68px] right-4 sm:right-5 z-50 w-[calc(100vw-32px)] sm:w-96 bg-white rounded-2xl border border-gray-100 shadow-2xl flex flex-col max-h-[calc(100vh-88px)] overflow-hidden">
+      <div className="fixed top-[84px] right-4 sm:right-5 z-50 w-[calc(100vw-32px)] sm:w-96 bg-white rounded-2xl border border-gray-100 shadow-2xl flex flex-col max-h-[calc(100vh-104px)] overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
