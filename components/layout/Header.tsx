@@ -156,7 +156,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
   return (
     <>
-      <header className="h-24 bg-white border-b border-gray-100 flex items-center px-5 gap-4 sticky top-0 z-20 flex-shrink-0">
+      <header className="h-20 bg-white border-b border-gray-100 flex items-center px-5 gap-4 sticky top-0 z-20 flex-shrink-0">
 
         <button onClick={onMenuToggle} className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors -ml-1">
           <Menu className="w-5 h-5 text-gray-600" />
