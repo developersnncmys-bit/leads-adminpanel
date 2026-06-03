@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <!-- Orange document — sits behind, slightly tilted left -->
-  <g transform="rotate(-10 30 50)" stroke="#F59E0B" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+  <!-- Back document — lighter blue, tilted left -->
+  <g transform="rotate(-10 30 50)" stroke="#60A5FA" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
     <path d="M14 16 H44 L56 28 V72 H14 Z" fill="#FFFFFF" />
     <path d="M44 16 V28 H56" />
     <line x1="22" y1="38" x2="42" y2="38" />
@@ -8,7 +8,7 @@
     <line x1="22" y1="54" x2="38" y2="54" />
   </g>
 
-  <!-- Blue document — sits in front -->
+  <!-- Front document — primary blue -->
   <g stroke="#2563EB" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
     <path d="M40 32 H68 L82 46 V92 H40 Z" fill="#FFFFFF" />
     <path d="M68 32 V46 H82" />
