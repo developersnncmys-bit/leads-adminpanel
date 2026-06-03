@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Search, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
@@ -358,17 +357,17 @@ export default function LeadTable({ leads }: Props) {
           <div className="px-4 py-12 text-center text-gray-400 text-sm">No leads found.</div>
         ) : (
           pageItems.map((lead) => (
-            <Link
+            <div
               key={lead.id}
-              href={(() => {
+              onClick={() => {
                 const qs = searchParams.toString();
                 const from = qs ? `${pathname}?${qs}` : pathname;
-                return `/leads/view?id=${lead.id}&from=${encodeURIComponent(from)}`;
-              })()}
-              className="block px-4 py-4 hover:bg-gray-50 transition-colors"
+                router.push(`/leads/view?id=${lead.id}&from=${encodeURIComponent(from)}`);
+              }}
+              className="block px-4 py-4 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer"
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600 font-bold">{lead.name[0]}</span>
                   </div>
@@ -377,16 +376,34 @@ export default function LeadTable({ leads }: Props) {
                     <p className="text-sm text-gray-500">{lead.mobileNumber}</p>
                   </div>
                 </div>
-                <PaymentBadge status={lead.paymentStatus} />
+                {/* Right cluster: payment + assign. stopPropagation so picking
+                    an assignee doesn't also trigger the card's navigation. */}
+                <div
+                  className="flex flex-col items-end gap-1.5 flex-shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <PaymentBadge status={lead.paymentStatus} />
+                  <select
+                    value={lead.assignedTo || 'Unassigned'}
+                    onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
+                    className="text-[11px] font-medium border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 max-w-[8rem] truncate focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  >
+                    <option value="Unassigned">+ Assign</option>
+                    {employees.map((emp) => (
+                      <option key={emp} value={emp}>{emp}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-500">
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                 <ServiceBadge service={lead.service} />
-                <span><span className="font-medium text-gray-700">District:</span> {lead.district}</span>
-                <span><span className="font-medium text-gray-700">Amount:</span> ₹{lead.amount.toLocaleString('en-IN')}</span>
-                <span><span className="font-medium text-gray-700">Assigned:</span> {lead.assignedTo}</span>
+                <span className="text-gray-300">·</span>
+                <span>{lead.district}</span>
+                <span className="text-gray-300">·</span>
+                <span className="font-semibold text-gray-700">₹{lead.amount.toLocaleString('en-IN')}</span>
               </div>
               <p className="text-xs text-gray-400 mt-2">{formatDate(lead.date)}</p>
-            </Link>
+            </div>
           ))
         )}
       </div>
