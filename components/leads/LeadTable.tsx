@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Search, Download, Filter, Trash2 } from 'lucide-react';
+import { Search, Filter, Trash2 } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
+import * as api from '@/lib/api';
 import { SERVICES } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { useAddLead } from '@/context/AddLeadContext';
@@ -60,11 +61,27 @@ export default function LeadTable({ leads }: Props) {
   );
 
   useEffect(() => {
+    // 1. Seed from localStorage immediately so the dropdown isn't empty
+    //    on first paint.
     const stored = localStorage.getItem('crm-users');
     if (stored) {
-      const users = JSON.parse(stored);
-      setEmployees(users.filter((u: { role: string }) => u.role === 'employee').map((u: { name: string }) => u.name));
+      try {
+        const cached = JSON.parse(stored);
+        setEmployees(
+          cached.filter((u: { role: string }) => u.role === 'employee').map((u: { name: string }) => u.name),
+        );
+      } catch {
+        // ignore bad cache
+      }
     }
+    // 2. Then refresh from the API so a freshly-added employee shows up
+    //    without needing the user to visit the team settings page first.
+    api.listUsers()
+      .then((fresh) => {
+        localStorage.setItem('crm-users', JSON.stringify(fresh));
+        setEmployees(fresh.filter((u) => u.role === 'employee').map((u) => u.name));
+      })
+      .catch(() => {/* keep cached / mock list */});
   }, []);
 
   const allFilteredIds = (f: Lead[]) => new Set(f.map((l) => l.id));
@@ -148,18 +165,6 @@ export default function LeadTable({ leads }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
-  const downloadCSV = () => {
-    const headers = ['Sl.No', 'Date', 'Name', 'Mobile', 'District', 'Service', 'Amount', 'Payment', 'Assigned To'];
-    const rows = filtered.map((l, i) => [
-      i + 1, l.date, l.name, l.mobileNumber, l.district, l.service,
-      l.amount, l.paymentStatus, l.assignedTo,
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
-    const a = document.createElement('a');
-    a.href = 'data:text/csv,' + encodeURIComponent(csv);
-    a.download = 'leads.csv';
-    a.click();
-  };
 
   // Sort-arrow icons removed from the header — clicking the th still sorts,
   // but the columns no longer carry a chevron indicator.
@@ -230,17 +235,6 @@ export default function LeadTable({ leads }: Props) {
     </select>
    </div>
 
-  {/* EXPORT BUTTON */}
-  <button
-    onClick={downloadCSV}
-    className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap"
-  >
-    <Download className="w-4 h-4" />
-
-    <span className="hidden sm:inline">
-      Export Excel
-    </span>
-  </button>
 
 </div>
       </div>

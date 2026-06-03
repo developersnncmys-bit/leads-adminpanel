@@ -23,7 +23,7 @@ export default function BottomNav() {
   const rightNav = [
     { href: '/leads/today',     icon: CalendarCheck, label: 'Today' },
     { href: '/leads/inprocess', icon: Clock,         label: 'Process' },
-    { href: '/leads/converted', icon: CheckCircle,   label: 'Done' },
+    { href: '/leads/converted', icon: CheckCircle,   label: 'Converted' },
   ];
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
