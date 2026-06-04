@@ -376,13 +376,13 @@ export default function LeadTable({ leads }: Props) {
                     <p className="text-sm text-gray-500">{lead.mobileNumber}</p>
                   </div>
                 </div>
-                {/* Right cluster: payment + assign. stopPropagation so picking
-                    an assignee doesn't also trigger the card's navigation. */}
+                {/* Right cluster: assign. stopPropagation so picking an
+                    assignee doesn't also trigger the card's navigation.
+                    Payment status moved down beside the amount. */}
                 <div
                   className="flex flex-col items-end gap-1.5 flex-shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <PaymentBadge status={lead.paymentStatus} />
                   <select
                     value={lead.assignedTo || 'Unassigned'}
                     onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
@@ -401,8 +401,9 @@ export default function LeadTable({ leads }: Props) {
                 <span>{lead.district}</span>
                 <span className="text-gray-300">·</span>
                 <span className="font-semibold text-gray-700">₹{lead.amount.toLocaleString('en-IN')}</span>
+                <PaymentBadge status={lead.paymentStatus} />
               </div>
-              <p className="text-xs text-gray-400 mt-2">{formatDate(lead.date)}</p>
+              <p className="text-xs font-bold text-gray-700 mt-2">{formatDate(lead.date)}</p>
             </div>
           ))
         )}

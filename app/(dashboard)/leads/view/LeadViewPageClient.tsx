@@ -281,12 +281,10 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   }, []);
 
   const addComment = (text: string) => {
-    // Author = the lead's assigned user when set; otherwise the currently
-    // logged-in account, so a comment is always attributable to a real user.
-    const author =
-      lead.assignedTo && lead.assignedTo !== 'Unassigned'
-        ? lead.assignedTo
-        : auth.name || 'Admin';
+    // Author = whoever is currently logged in (admin or employee). A comment
+    // should always be stamped with the user who actually wrote it, not the
+    // person the lead happens to be assigned to.
+    const author = auth.name || (auth.role === 'admin' ? 'Admin' : 'User');
     // Goes through the dedicated POST /api/leads/:id/notes endpoint, which
     // $pushes one note so the timestamps of older notes stay intact.
     addNote(lead.id, text, author);
@@ -336,10 +334,8 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   // activity feed so the audit trail is preserved even if the field isn't
   // persisted by the backend.
   const handleRefund = (amount: number) => {
-    const author =
-      lead.assignedTo && lead.assignedTo !== 'Unassigned'
-        ? lead.assignedTo
-        : auth.name || 'Admin';
+    // Same rule as addComment — author is the logged-in user, not assignedTo.
+    const author = auth.name || (auth.role === 'admin' ? 'Admin' : 'User');
     addNote(lead.id, `Refund of ₹${amount.toLocaleString('en-IN')} processed.`, author);
     updateLead(lead.id, { refundAmount: amount });
   };
@@ -392,6 +388,17 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
         {/* Dark gradient header */}
         <div className="bg-gradient-to-br from-slate-800 via-slate-800 to-slate-900 px-6 pt-6 pb-5">
+
+          {/* Status pill — pinned top-right, right above the profile so the
+              lead's stage (New / Overdue / Follow Up …) is clear on mobile. */}
+          <div className="flex justify-end mb-3">
+            <span
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${cfg.bg} ${cfg.color} ${cfg.border}`}
+            >
+              {cfg.label}
+            </span>
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-start gap-4">
 
             {/* Avatar */}
@@ -401,7 +408,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
                 <div>
                   <h1 className="text-xl font-bold text-white leading-tight uppercase">{lead.name || '—'}</h1>
                   <p className="text-slate-400 text-sm mt-0.5 uppercase">{lead.service}</p>
@@ -430,21 +437,12 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {/* Read-only status pill. Use the action-bar buttons below
-                      (In Process / Converted / Dead / Follow Up) to change. */}
-                  <span
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${cfg.bg} ${cfg.color} ${cfg.border}`}
-                  >
-                    {cfg.label}
-                  </span>
-                </div>
               </div>
             </div>
           </div>
 
           {/* Stats row */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mt-5">
             {[
               { label: 'Amount',  value: lead.amount > 0 ? `₹${lead.amount.toLocaleString('en-IN')}` : '—' },
               {
@@ -459,9 +457,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               { label: 'Source',  value: lead.source || '—' },
               { label: 'Date',    value: formatDate(lead.date) },
             ].map(({ label, value }) => (
-              <div key={label} className="bg-white/5 rounded-xl px-3.5 py-2.5 border border-white/10">
-                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">{label}</p>
-                <p className="text-sm font-semibold text-white mt-0.5 truncate uppercase">{value}</p>
+              <div key={label} className="bg-white/5 rounded-xl px-3 sm:px-3.5 py-2 sm:py-2.5 border border-white/10 min-w-0">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-slate-500 uppercase tracking-wide sm:tracking-widest">{label}</p>
+                <p className="text-xs sm:text-sm font-semibold text-white mt-0.5 break-words uppercase">{value}</p>
               </div>
             ))}
           </div>
@@ -624,6 +622,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 /* ─── Admin lead view (existing design) ────────────────────────── */
 function ManualLeadView({ leadId }: { leadId: string }) {
   const { leads, updateLead } = useAddLead();
+  const auth = useAuthUser();
   const lead = leads.find((l) => l.id === leadId);
   if (!lead) return notFound();
 
@@ -647,7 +646,8 @@ function ManualLeadView({ leadId }: { leadId: string }) {
 
   const addNote = () => {
     if (!noteText.trim()) return;
-    const note = { id: Date.now().toString(), text: noteText, author: 'Deepak Kumar', createdAt: new Date().toISOString().split('T')[0] };
+    const author = auth.name || (auth.role === 'admin' ? 'Admin' : 'User');
+    const note = { id: Date.now().toString(), text: noteText, author, createdAt: new Date().toISOString().split('T')[0] };
     setNotes((n) => [...n, note]);
     setNoteText('');
   };
