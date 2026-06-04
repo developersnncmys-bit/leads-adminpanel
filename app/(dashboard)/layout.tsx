@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
@@ -14,7 +15,33 @@ import { EditBlogProvider } from '@/context/EditBlogContext';
 import { BlogProvider } from '@/context/BlogContext';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Auth gate: the dashboard is client-rendered, so guard it here. Until we've
+  // confirmed a saved login (localStorage 'crm-auth'), show a spinner. If none
+  // is found, send the user to /login — so opening the app cold lands on the
+  // login page, not straight on the dashboard.
+  const [authed, setAuthed] = useState(false);
+  useEffect(() => {
+    let ok = false;
+    try {
+      const raw = localStorage.getItem('crm-auth');
+      ok = !!raw && !!JSON.parse(raw)?.userId;
+    } catch {
+      ok = false;
+    }
+    if (ok) setAuthed(true);
+    else router.replace('/login');
+  }, [router]);
+
+  if (!authed) {
+    return (
+      <div className="h-full flex items-center justify-center bg-slate-50/80">
+        <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <AddLeadProvider>
