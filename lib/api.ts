@@ -1,4 +1,4 @@
-import type { Lead, User, Blog } from './types';
+import type { Lead, User, Blog, Career } from './types';
 
 // Base URL of the MMD backend. Override with NEXT_PUBLIC_API_URL in production.
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://mmdbackend.onrender.com';
@@ -128,4 +128,31 @@ export async function updateBlog(id: string, updates: Partial<Blog>): Promise<Bl
 
 export async function deleteBlog(id: string): Promise<void> {
   await request(`/blogs/${id}`, { method: 'DELETE' });
+}
+
+/* ── Careers ────────────────────────────────────────────── */
+
+export async function listCareers(): Promise<Career[]> {
+  const data = await request<{ data: Career[] }>('/careers');
+  return data.data;
+}
+
+export async function createCareer(payload: Partial<Career>): Promise<Career> {
+  const data = await request<{ data: Career }>('/careers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return data.data;
+}
+
+export async function updateCareer(id: string, updates: Partial<Career>): Promise<Career> {
+  const data = await request<{ data: Career }>(`/careers/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  return data.data;
+}
+
+export async function deleteCareer(id: string): Promise<void> {
+  await request(`/careers/${id}`, { method: 'DELETE' });
 }

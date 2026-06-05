@@ -13,6 +13,8 @@ import { AddBlogProvider } from '@/context/AddBlogContext';
 import EditBlogModal from '@/components/blogs/EditBlogModal';
 import { EditBlogProvider } from '@/context/EditBlogContext';
 import { BlogProvider } from '@/context/BlogContext';
+import { CareerProvider } from '@/context/CareerContext';
+import CareerEditorModal from '@/components/careers/CareerEditorModal';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -46,6 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <AddLeadProvider>
       <BlogProvider>
+      <CareerProvider>
       <AddBlogProvider>
         <EditBlogProvider>
           <div className="h-full flex bg-slate-50/80">
@@ -63,9 +66,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <AddLeadModal />
             <AddBlogModal />
             <EditBlogModal />
+            <CareerEditorModal />
           </div>
         </EditBlogProvider>
       </AddBlogProvider>
+      </CareerProvider>
       </BlogProvider>
     </AddLeadProvider>
   );

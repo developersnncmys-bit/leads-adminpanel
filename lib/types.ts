@@ -90,6 +90,23 @@ export interface Blog {
   readTime?: string;
 }
 
+export type CareerType = 'Full-time' | 'Part-time' | 'Internship' | 'Contract';
+
+export interface Career {
+  id: string;
+  slNo: number;
+  title: string;
+  slug: string;
+  department: string;
+  type: CareerType;
+  location: string;
+  experience: string;
+  description: string;
+  tags: string[];
+  status: 'open' | 'closed';
+  createdAt: string;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
