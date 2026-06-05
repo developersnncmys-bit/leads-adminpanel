@@ -395,7 +395,8 @@ export default function LeadTable({ leads }: Props) {
                   </select>
                 </div>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <p className="text-xs font-bold text-gray-700 mt-3">{formatDate(lead.date)}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                 <ServiceBadge service={lead.service} />
                 <span className="text-gray-300">·</span>
                 <span>{lead.district}</span>
@@ -403,7 +404,6 @@ export default function LeadTable({ leads }: Props) {
                 <span className="font-semibold text-gray-700">₹{lead.amount.toLocaleString('en-IN')}</span>
                 <PaymentBadge status={lead.paymentStatus} />
               </div>
-              <p className="text-xs font-bold text-gray-700 mt-2">{formatDate(lead.date)}</p>
             </div>
           ))
         )}

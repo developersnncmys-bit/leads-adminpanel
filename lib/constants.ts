@@ -1,17 +1,19 @@
 import { LeadStatus } from './types';
 
+// Canonical 11 backend services — mirrored across the website's home form
+// (Solution.jsx), Contact Us, and the blog-detail contact form.
 export const SERVICES = [
-  'Insurance',
-  'Tourist Visa',
-  'Rental Agreement',
-  'Lease Agreement',
   'Passport',
   'PAN Card',
+  'Tourist Visa',
   'Senior Citizen Card',
-  'Police Verification Certificate (PVC)',
-  'MSME Certificate',
+  'Rental Agreement',
+  'Lease Agreement',
+  'MSME Registration',
+  'Insurance',
   'Police Clearance Certificate (PCC)',
-  'Affidavits/Annexure',
+  'Police Verification Certificate (PVC)',
+  'Affidavits / Annexure',
 ];
 
 export const DISTRICTS = [
