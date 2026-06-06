@@ -9,6 +9,7 @@ import * as api from '@/lib/api';
 import { SERVICES } from '@/lib/constants';
 import { formatDate } from '@/lib/format';
 import { useAddLead } from '@/context/AddLeadContext';
+import { useAuthUser } from '@/lib/useAuthUser';
 import PaymentBadge from './PaymentBadge';
 import ServiceBadge from './ServiceBadge';
 import Pagination from '../Pagination';
@@ -24,6 +25,10 @@ export default function LeadTable({ leads }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { deleteLead, updateLead } = useAddLead();
+  // Only admins may (re)assign a lead. Employees see the assigned name as
+  // read-only text — the dropdown is hidden for them.
+  const auth = useAuthUser();
+  const isAdmin = auth.role === 'admin';
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<keyof Lead>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -332,16 +337,22 @@ export default function LeadTable({ leads }: Props) {
                     <PaymentBadge status={lead.paymentStatus} />
                   </td>
                   <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
-                    <select
-                      value={lead.assignedTo || 'Unassigned'}
-                      onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
-                      className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[8rem]"
-                    >
-                      <option value="Unassigned">Select assigned user</option>
-                      {employees.map((emp) => (
-                        <option key={emp} value={emp}>{emp}</option>
-                      ))}
-                    </select>
+                    {isAdmin ? (
+                      <select
+                        value={lead.assignedTo || 'Unassigned'}
+                        onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
+                        className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[8rem]"
+                      >
+                        <option value="Unassigned">Select assigned user</option>
+                        {employees.map((emp) => (
+                          <option key={emp} value={emp}>{emp}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs font-medium text-gray-700 truncate inline-block max-w-[8rem]">
+                        {lead.assignedTo && lead.assignedTo !== 'Unassigned' ? lead.assignedTo : 'Unassigned'}
+                      </span>
+                    )}
                   </td>
                   
                 </tr>
@@ -383,16 +394,22 @@ export default function LeadTable({ leads }: Props) {
                   className="flex flex-col items-end gap-1.5 flex-shrink-0"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <select
-                    value={lead.assignedTo || 'Unassigned'}
-                    onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
-                    className="text-[11px] font-medium border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 max-w-[8rem] truncate focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                  >
-                    <option value="Unassigned">+ Assign</option>
-                    {employees.map((emp) => (
-                      <option key={emp} value={emp}>{emp}</option>
-                    ))}
-                  </select>
+                  {isAdmin ? (
+                    <select
+                      value={lead.assignedTo || 'Unassigned'}
+                      onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
+                      className="text-[11px] font-medium border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 max-w-[8rem] truncate focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    >
+                      <option value="Unassigned">+ Assign</option>
+                      {employees.map((emp) => (
+                        <option key={emp} value={emp}>{emp}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="text-[11px] font-medium text-gray-600 max-w-[8rem] truncate">
+                      {lead.assignedTo && lead.assignedTo !== 'Unassigned' ? lead.assignedTo : 'Unassigned'}
+                    </span>
+                  )}
                 </div>
               </div>
               <p className="text-xs font-bold text-gray-700 mt-3">{formatDate(lead.date)}</p>
