@@ -519,13 +519,35 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             </button>
           )}
 
-          {/* Refund — opens a modal that asks for an amount, records a note
-              and stamps the lead's refundAmount. Sits at the end of the
-              action row, just before the Delete affordance. */}
-          <button onClick={() => setShowRefund(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 text-sm font-semibold text-rose-700 hover:bg-rose-100 shadow-sm transition-all">
-            <IndianRupee className="w-3.5 h-3.5" /> Refund
-          </button>
+          {/* Refund — only active when there's an actual paid transaction to
+              refund AND it hasn't already been refunded. For unpaid or
+              already-refunded leads the button stays visible but disabled,
+              with a tooltip explaining why so admins know it's intentional. */}
+          {(() => {
+            const isPaid = lead.paymentStatus === 'paid';
+            const alreadyRefunded = !!(lead.refundAmount && lead.refundAmount > 0);
+            const canRefund = isPaid && !alreadyRefunded;
+            const tooltip = alreadyRefunded
+              ? `Already refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
+              : !isPaid
+                ? 'No paid transaction to refund'
+                : 'Process a refund for this transaction';
+            return (
+              <button
+                onClick={() => canRefund && setShowRefund(true)}
+                disabled={!canRefund}
+                title={tooltip}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold shadow-sm transition-all ${
+                  canRefund
+                    ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer'
+                    : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60'
+                }`}
+              >
+                <IndianRupee className="w-3.5 h-3.5" />
+                {alreadyRefunded ? 'Refunded' : 'Refund'}
+              </button>
+            );
+          })()}
 
           {/* Delete */}
           <div className="ml-auto">
