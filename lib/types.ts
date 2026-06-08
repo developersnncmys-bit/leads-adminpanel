@@ -36,6 +36,15 @@ export interface Lead {
   // Last refund recorded for this lead (₹). A note is added alongside for
   // an audit trail, but the field gives a quick numeric indicator.
   refundAmount?: number;
+  refundStatus?: 'none' | 'pending' | 'refunded' | 'failed';
+  refundRefId?: string;
+  refundPaytmId?: string;
+  refundedAt?: string;
+  // Paytm transaction identifiers — populated by the callback when payment
+  // succeeds. Required to call the Paytm refund API later.
+  paytmTxnId?: string;
+  paytmBankTxnId?: string;
+  paidAt?: string;
   // website-lead specific fields
   leadType?: 'website' | 'manual';
   time?: string;

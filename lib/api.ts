@@ -51,6 +51,22 @@ export async function addLeadNote(id: string, text: string, author = 'Admin'): P
   return data.data;
 }
 
+// Issue a Paytm refund. Backend calls Paytm's /refund/apply API and returns
+// the updated lead with refundStatus set. Throws on failure with Paytm's
+// error message so the UI can show it.
+export async function refundLead(leadId: string, amount: number): Promise<Lead> {
+  const res = await fetch(`${API_BASE}/api/PG/paytm/refund`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ leadId, amount }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Refund failed');
+  }
+  return data.lead as Lead;
+}
+
 /* ── Users ─────────────────────────────────────────────── */
 
 export async function listUsers(): Promise<User[]> {

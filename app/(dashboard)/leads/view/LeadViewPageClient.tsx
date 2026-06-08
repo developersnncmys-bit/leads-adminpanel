@@ -330,14 +330,26 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     goBack();
   };
 
-  // Record a refund — stamps lead.refundAmount AND drops a note into the
-  // activity feed so the audit trail is preserved even if the field isn't
-  // persisted by the backend.
-  const handleRefund = (amount: number) => {
-    // Same rule as addComment — author is the logged-in user, not assignedTo.
-    const author = auth.name || (auth.role === 'admin' ? 'Admin' : 'User');
-    addNote(lead.id, `Refund of ₹${amount.toLocaleString('en-IN')} processed.`, author);
-    updateLead(lead.id, { refundAmount: amount });
+  // Issue a Paytm refund. Calls the backend which talks to Paytm's
+  // /refund/apply API; the money goes back to whichever payment instrument
+  // the customer originally used (UPI/card/netbanking). The backend writes
+  // a system note + updates the lead, so we just refetch into the local
+  // context after a successful refund.
+  const handleRefund = async (amount: number) => {
+    try {
+      const updated = await api.refundLead(lead.id, amount);
+      // Context expects camelCase fields — backend already returns the lead
+      // in the same shape; merge in the refund fields we care about for UI.
+      updateLead(lead.id, {
+        refundAmount: updated.refundAmount ?? amount,
+        refundStatus: updated.refundStatus,
+        notes: updated.notes,
+      } as Partial<typeof lead>);
+      alert(`Refund of ₹${amount.toLocaleString('en-IN')} ${updated.refundStatus === 'pending' ? 'queued (pending at Paytm)' : 'processed successfully'}.`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Refund failed';
+      alert(`Refund failed: ${msg}`);
+    }
   };
 
   const handleDelete = () => {
