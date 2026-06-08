@@ -203,15 +203,18 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           )}
         </div>
 
-        {now && (
-          <div className="hidden lg:flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
-            <span>{dateStr}</span>
-            <span className="text-blue-300">·</span>
-            <span className="tabular-nums">{timeStr}</span>
-          </div>
-        )}
+        {/* Right cluster — date/time chip + action icons, pinned to the corner */}
+        <div className="flex items-center gap-3 ml-auto">
 
-        <div className="flex items-center gap-2 ml-auto">
+          {now && (
+            <div className="hidden lg:flex items-center gap-2 text-sm font-semibold text-blue-600 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+              <span>{dateStr}</span>
+              <span className="text-blue-300">·</span>
+              <span className="tabular-nums">{timeStr}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
 
           {/* <Link href="/settings" className="hidden lg:block p-2.5 rounded-xl hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600">
             <Settings className="w-[18px] h-[18px]" />
@@ -234,7 +237,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             </button>
 
             {showNotifications && (
-              <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl border border-gray-100 shadow-xl z-50 overflow-hidden">
+              <div className="absolute top-full right-0 mt-2 w-[calc(100vw-6rem)] max-w-[20rem] sm:w-80 bg-white rounded-2xl border border-gray-100 shadow-xl z-50 overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50">
                   <h3 className="text-sm font-bold text-gray-900">Notifications</h3>
                   <span className="text-xs text-gray-400">{notifications.length} pending</span>
@@ -322,6 +325,8 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 </div>
               </div>
             )}
+          </div>
+
           </div>
 
         </div>

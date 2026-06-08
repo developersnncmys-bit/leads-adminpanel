@@ -37,7 +37,6 @@ export default function Sidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
 
-      {/* Logo — match the login-page logo (no sidebar text) */}
       {/* Brand: blue-tile Zap icon + "Make My Documents" wordmark. */}
       <div className="flex items-center gap-3 px-5 h-20 border-b border-gray-100 flex-shrink-0">
         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-blue-200">
