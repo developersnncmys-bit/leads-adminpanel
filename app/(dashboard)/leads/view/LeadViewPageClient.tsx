@@ -533,24 +533,22 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             </button>
           )}
 
-          {/* Refund — only active when there's an actual paid transaction to
-              refund AND it isn't already refunded or mid-refund. Decision is
-              based on refundStatus (NOT refundAmount): a FAILED attempt also
-              records an amount, so keying off the amount would wrongly lock
-              the button after a failure. A failed refund must stay retryable. */}
+          {/* Refund — clickable unless it's already refunded or mid-refund.
+              Decision is based on refundStatus (NOT refundAmount): a FAILED
+              attempt also records an amount, so keying off the amount would
+              wrongly lock the button after a failure. The button does NOT
+              require paymentStatus === 'paid' — payment may have been taken
+              through another channel, so the action stays available. */}
           {(() => {
-            const isPaid = lead.paymentStatus === 'paid';
             const alreadyRefunded = lead.refundStatus === 'refunded';
             const refundPending = lead.refundStatus === 'pending';
-            const canRefund = isPaid && !alreadyRefunded && !refundPending;
+            const canRefund = !alreadyRefunded && !refundPending;
             const label = alreadyRefunded ? 'Refunded' : refundPending ? 'Refund pending' : 'Refund';
             const tooltip = alreadyRefunded
               ? `Already refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
               : refundPending
                 ? 'A refund is already pending at Paytm'
-                : !isPaid
-                  ? 'No paid transaction to refund'
-                  : 'Process a refund for this transaction';
+                : 'Process a refund for this transaction';
             return (
               <button
                 onClick={() => canRefund && setShowRefund(true)}
