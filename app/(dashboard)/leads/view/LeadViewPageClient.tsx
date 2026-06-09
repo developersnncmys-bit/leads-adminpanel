@@ -460,11 +460,13 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               {
                 label: 'Payment',
                 value:
-                  lead.refundAmount && lead.refundAmount > 0
-                    ? `Refunded ₹${lead.refundAmount.toLocaleString('en-IN')}`
-                    : lead.paymentStatus === 'paid'
-                      ? 'Paid'
-                      : 'Unpaid',
+                  lead.refundStatus === 'refunded'
+                    ? `Refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
+                    : lead.refundStatus === 'pending'
+                      ? 'Refund pending'
+                      : lead.paymentStatus === 'paid'
+                        ? 'Paid'
+                        : 'Unpaid',
               },
               { label: 'Source',  value: lead.source || '—' },
               { label: 'Date',    value: formatDate(lead.date) },
@@ -532,18 +534,23 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
           )}
 
           {/* Refund — only active when there's an actual paid transaction to
-              refund AND it hasn't already been refunded. For unpaid or
-              already-refunded leads the button stays visible but disabled,
-              with a tooltip explaining why so admins know it's intentional. */}
+              refund AND it isn't already refunded or mid-refund. Decision is
+              based on refundStatus (NOT refundAmount): a FAILED attempt also
+              records an amount, so keying off the amount would wrongly lock
+              the button after a failure. A failed refund must stay retryable. */}
           {(() => {
             const isPaid = lead.paymentStatus === 'paid';
-            const alreadyRefunded = !!(lead.refundAmount && lead.refundAmount > 0);
-            const canRefund = isPaid && !alreadyRefunded;
+            const alreadyRefunded = lead.refundStatus === 'refunded';
+            const refundPending = lead.refundStatus === 'pending';
+            const canRefund = isPaid && !alreadyRefunded && !refundPending;
+            const label = alreadyRefunded ? 'Refunded' : refundPending ? 'Refund pending' : 'Refund';
             const tooltip = alreadyRefunded
               ? `Already refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
-              : !isPaid
-                ? 'No paid transaction to refund'
-                : 'Process a refund for this transaction';
+              : refundPending
+                ? 'A refund is already pending at Paytm'
+                : !isPaid
+                  ? 'No paid transaction to refund'
+                  : 'Process a refund for this transaction';
             return (
               <button
                 onClick={() => canRefund && setShowRefund(true)}
@@ -556,7 +563,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
                 }`}
               >
                 <IndianRupee className="w-3.5 h-3.5" />
-                {alreadyRefunded ? 'Refunded' : 'Refund'}
+                {label}
               </button>
             );
           })()}
