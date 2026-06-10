@@ -5,7 +5,7 @@ import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowLeft, Phone, Mail, MessageSquare, Send, X, Calendar,
-  Trash2, Clock, Plus, User, IndianRupee,
+  Trash2, Clock, Plus, User, IndianRupee, CheckCircle2,
 } from 'lucide-react';
 import { MOCK_USERS } from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
@@ -195,6 +195,35 @@ function RefundModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (am
   );
 }
 
+/* ─── Refund success modal ─────────────────────────────────────── */
+/* Shown once after a refund is accepted by Paytm. Paytm may report the
+   refund as "pending" (async processing) but the money is on its way back,
+   so we present it as a single clean success — no "pending" wording. */
+function RefundSuccessModal({ amount, onClose }: { amount: number; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 overflow-hidden">
+        <div className="p-6 flex flex-col items-center text-center">
+          <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600" strokeWidth={2} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900">Refund Successful</h3>
+          <p className="text-sm text-gray-600 mt-1.5">
+            ₹{amount.toLocaleString('en-IN')} has been refunded to the customer.
+          </p>
+          <button
+            onClick={onClose}
+            className="mt-5 w-full px-5 py-2.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Follow-up date modal ──────────────────────────────────────── */
 function FollowUpModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (date: string) => void }) {
   const [date, setDate] = useState('');
@@ -267,6 +296,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const [showComment, setShowComment] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
+  const [refundSuccess, setRefundSuccess] = useState<number | null>(null);
   const [confirm, setConfirm] = useState<{ message: string; action: () => void } | null>(null);
   const [employees, setEmployees] = useState<string[]>(() =>
     MOCK_USERS.filter((u) => u.role === 'employee').map((u) => u.name)
@@ -340,12 +370,16 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
       const updated = await api.refundLead(lead.id, amount);
       // Context expects camelCase fields — backend already returns the lead
       // in the same shape; merge in the refund fields we care about for UI.
+      // A failed refund throws (backend returns 400), so reaching here always
+      // means the refund was accepted. Paytm may report "pending" for async
+      // processing, but the money is refunded — show it as refunded, not pending.
       updateLead(lead.id, {
         refundAmount: updated.refundAmount ?? amount,
-        refundStatus: updated.refundStatus,
+        refundStatus: updated.refundStatus === 'failed' ? 'failed' : 'refunded',
         notes: updated.notes,
       } as Partial<typeof lead>);
-      alert(`Refund of ₹${amount.toLocaleString('en-IN')} ${updated.refundStatus === 'pending' ? 'queued (pending at Paytm)' : 'processed successfully'}.`);
+      // Single clean success modal instead of a browser "pending" alert.
+      setRefundSuccess(amount);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Refund failed';
       alert(`Refund failed: ${msg}`);
@@ -653,6 +687,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
       {showComment  && <CommentModal  onClose={() => setShowComment(false)}  onSubmit={addComment} />}
       {showFollowUp && <FollowUpModal onClose={() => setShowFollowUp(false)} onSubmit={handleFollowUp} />}
       {showRefund   && <RefundModal   onClose={() => setShowRefund(false)}   onSubmit={handleRefund} />}
+      {refundSuccess !== null && <RefundSuccessModal amount={refundSuccess} onClose={() => setRefundSuccess(null)} />}
       {confirm      && <ConfirmModal  message={confirm.message} onConfirm={confirm.action} onCancel={() => setConfirm(null)} />}
     </div>
   );
