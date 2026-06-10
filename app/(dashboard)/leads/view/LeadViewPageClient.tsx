@@ -533,13 +533,13 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             </button>
           )}
 
-          {/* Refund — clickable unless it's already refunded or mid-refund.
-              Decision is based on refundStatus (NOT refundAmount): a FAILED
-              attempt also records an amount, so keying off the amount would
-              wrongly lock the button after a failure. The button does NOT
+          {/* Refund — admin-only. Clickable unless it's already refunded or
+              mid-refund. Decision is based on refundStatus (NOT refundAmount):
+              a FAILED attempt also records an amount, so keying off the amount
+              would wrongly lock the button after a failure. The button does NOT
               require paymentStatus === 'paid' — payment may have been taken
               through another channel, so the action stays available. */}
-          {(() => {
+          {auth.role === 'admin' && (() => {
             const alreadyRefunded = lead.refundStatus === 'refunded';
             const refundPending = lead.refundStatus === 'pending';
             const canRefund = !alreadyRefunded && !refundPending;

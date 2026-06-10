@@ -285,8 +285,8 @@ export default function LeadTable({ leads }: Props) {
               <Th col="district" label="District" className="hidden xl:table-cell" />
               <Th col="service" label="Service" />
               <Th col="amount" label="Amount" className="hidden lg:table-cell" />
-              <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
-              <th className="px-2 py-2 text-left text-[11px] font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned</th>
+              <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Payment</th>
+              <th className="px-2 py-2 text-left text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Assigned</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -315,8 +315,8 @@ export default function LeadTable({ leads }: Props) {
                       className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
                     />
                   </td>
-                  <td className="px-2 py-2 text-xs text-gray-500 font-medium hidden xl:table-cell">{index + 1}</td>
-                  <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
+                  <td className="px-2 py-2 text-sm text-gray-500 font-medium hidden xl:table-cell">{index + 1}</td>
+                  <td className="px-2 py-2 text-sm text-gray-600 whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
                   <td className="px-2 py-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -325,12 +325,12 @@ export default function LeadTable({ leads }: Props) {
                       <span className="text-sm font-semibold text-gray-900 truncate">{lead.name}</span>
                     </div>
                   </td>
-                  <td className="px-2 py-2 text-xs text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
-                  <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
+                  <td className="px-2 py-2 text-sm text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
+                  <td className="px-2 py-2 text-sm text-gray-600 whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
                   <td className="px-2 py-2 max-w-[10rem]">
                     <ServiceBadge service={lead.service} />
                   </td>
-                  <td className="px-2 py-2 text-xs font-semibold text-gray-900 whitespace-nowrap hidden lg:table-cell">
+                  <td className="px-2 py-2 text-sm font-semibold text-gray-900 whitespace-nowrap hidden lg:table-cell">
                     ₹{lead.amount.toLocaleString('en-IN')}
                   </td>
                   <td className="px-2 py-2">
@@ -341,7 +341,7 @@ export default function LeadTable({ leads }: Props) {
                       <select
                         value={lead.assignedTo || 'Unassigned'}
                         onChange={(e) => updateLead(lead.id, { assignedTo: e.target.value })}
-                        className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[8rem]"
+                        className="text-sm border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[8rem]"
                       >
                         <option value="Unassigned">Select assigned user</option>
                         {employees.map((emp) => (
@@ -349,7 +349,7 @@ export default function LeadTable({ leads }: Props) {
                         ))}
                       </select>
                     ) : (
-                      <span className="text-xs font-medium text-gray-700 truncate inline-block max-w-[8rem]">
+                      <span className="text-sm font-medium text-gray-700 truncate inline-block max-w-[8rem]">
                         {lead.assignedTo && lead.assignedTo !== 'Unassigned' ? lead.assignedTo : 'Unassigned'}
                       </span>
                     )}
