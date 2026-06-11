@@ -31,11 +31,14 @@ const STATUS_META: Record<LeadStatus, {
 
 export default function LeadStatusPageClient({ params }: { params: Promise<{ status: string }> }) {
   const { status } = use(params);
-  const { leads: allLeads } = useAddLead();
+  const { leads: allLeads, stats } = useAddLead();
   if (!VALID.includes(status as LeadStatus)) notFound();
 
   const s = status as LeadStatus;
   const leads = allLeads.filter((lead) => lead.status === s);
+  // Header count comes from the authoritative server stats (the list fills in
+  // from the in-memory leads, which match once fully loaded).
+  const count = stats ? stats[s] : leads.length;
   const cfg = STATUS_CONFIG[s];
   const meta = STATUS_META[s];
   const Icon = meta.icon;
@@ -56,7 +59,7 @@ export default function LeadStatusPageClient({ params }: { params: Promise<{ sta
 
       <div className="flex items-center gap-2">
         <span className={`text-sm font-semibold px-3 py-1.5 rounded-lg ${meta.lightBg} ${meta.textColor}`}>
-          {leads.length} lead{leads.length !== 1 ? 's' : ''} in {cfg.label}
+          {count} lead{count !== 1 ? 's' : ''} in {cfg.label}
         </span>
       </div>
 

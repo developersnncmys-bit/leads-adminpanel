@@ -66,10 +66,12 @@ const PIPELINE_TABS = [
 ];
 
 export default function DashboardPage() {
-  const { leads, openModal } = useAddLead();
+  const { leads, openModal, stats: serverStats } = useAddLead();
   const user = useAuthUser();
 
-  const stats = {
+  // Counts come from the server (authoritative, exact). Fall back to counting
+  // the in-memory list only until the first stats response arrives.
+  const stats = serverStats ?? {
     new:       leads.filter((l) => l.status === 'new').length,
     overdue:   leads.filter((l) => l.status === 'overdue').length,
     today:     leads.filter((l) => l.status === 'today').length,

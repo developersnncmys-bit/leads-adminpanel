@@ -11,6 +11,9 @@ interface AddLeadContextType {
   closeModal: () => void;
   leads: Lead[];
   loading: boolean;
+  // Authoritative counts from the server (accurate regardless of the in-memory
+  // list, which can be large/slow to load). Null until first fetched.
+  stats: api.LeadStats | null;
   addLead: (lead: Lead) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
@@ -24,6 +27,7 @@ const AddLeadContext = createContext<AddLeadContextType>({
   closeModal: () => {},
   leads: [],
   loading: true,
+  stats: null,
   addLead: () => {},
   updateLead: () => {},
   deleteLead: () => {},
@@ -36,6 +40,10 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<api.LeadStats | null>(null);
+
+  // Employees see only their own counts; admins see the whole pipeline.
+  const scopeArg = auth.role && auth.role !== 'admin' ? auth.name : undefined;
 
   // Mirror of allLeads.length, kept in a ref so the poll can compare against it
   // without re-creating the interval on every list change.
@@ -44,8 +52,7 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
 
   // Full (lean) list fetch. The list endpoint omits formData, so this stays
   // small even with ~18k leads. We only call it on first load and whenever the
-  // server-side count changes (see the stats poll below) — NOT every 10s, which
-  // would re-download megabytes repeatedly.
+  // server-side count changes — NOT every 10s, which would re-download MBs.
   const refresh = useCallback(async () => {
     try {
       const leads = await api.listLeads();
@@ -58,40 +65,40 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Cheap, authoritative counts. Also the new-lead detector: if the global total
+  // changed, re-fetch the (heavy) list once. Counts come from here — never from
+  // counting the in-memory array — so they're always correct even mid-load.
+  const loadStats = useCallback(async () => {
+    try {
+      const global = await api.getLeadStats();
+      if (global.total !== countRef.current) await refresh();
+      setStats(scopeArg ? await api.getLeadStats(scopeArg) : global);
+    } catch {
+      // ignore transient errors (cold start / offline)
+    }
+  }, [refresh, scopeArg]);
+
   useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { loadStats(); }, [loadStats]);
 
-  // Poll only the cheap stats every 10s. If the total lead count changed (a new
-  // website lead arrived, or one was removed), re-fetch the full list — which
-  // updates the chime/notifications. Otherwise we skip the heavy download.
+  // Poll the cheap stats every 10s (drives counts + new-lead chime).
   useEffect(() => {
-    const check = async () => {
-      try {
-        const stats = await api.getLeadStats();
-        if (stats.total !== countRef.current) await refresh();
-      } catch {
-        // ignore transient errors (cold start / offline)
-      }
-    };
-    const id = setInterval(check, 10_000);
+    const id = setInterval(() => { loadStats(); }, 10_000);
     return () => clearInterval(id);
-  }, [refresh]);
+  }, [loadStats]);
 
-  // When the tab regains focus, re-check immediately (background tabs throttle
-  // timers), refetching only if the count drifted.
+  // Background tabs throttle timers — re-check on focus.
   useEffect(() => {
-    const onVisible = async () => {
+    const onVisible = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        try {
-          const stats = await api.getLeadStats();
-          if (stats.total !== countRef.current) await refresh();
-        } catch { /* ignore */ }
+        loadStats();
       }
     };
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', onVisible);
       return () => document.removeEventListener('visibilitychange', onVisible);
     }
-  }, [refresh]);
+  }, [loadStats]);
 
   const addLead = async (lead: Lead) => {
     try {
@@ -151,6 +158,7 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
       closeModal: () => setOpen(false),
       leads,
       loading,
+      stats,
       addLead,
       updateLead,
       deleteLead,

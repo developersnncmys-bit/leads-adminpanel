@@ -33,10 +33,13 @@ export interface LeadStats {
   inprocess: number; converted: number; dead: number; total: number;
 }
 
-// Cheap counts (reads only tiny fields server-side). Used to detect new leads
-// without re-downloading the whole list every poll.
-export async function getLeadStats(): Promise<LeadStats> {
-  const data = await request<{ data: LeadStats }>('/leads/stats');
+// Cheap, authoritative counts (computed server-side). Used both to detect new
+// leads (without re-downloading the whole list) and to drive the dashboard /
+// tab counts so they're always correct regardless of the in-memory list.
+// Pass assignedTo to scope counts to one employee.
+export async function getLeadStats(assignedTo?: string): Promise<LeadStats> {
+  const qs = assignedTo ? `?assignedTo=${encodeURIComponent(assignedTo)}` : '';
+  const data = await request<{ data: LeadStats }>(`/leads/stats${qs}`);
   return data.data;
 }
 
