@@ -494,11 +494,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               {
                 label: 'Payment',
                 value:
-                  lead.refundStatus === 'refunded'
+                  lead.refundStatus === 'refunded' || lead.refundStatus === 'pending'
                     ? `Refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
-                    : lead.refundStatus === 'pending'
-                      ? 'Refund pending'
-                      : lead.paymentStatus === 'paid'
+                    : lead.paymentStatus === 'paid'
                         ? 'Paid'
                         : 'Unpaid',
               },
@@ -574,15 +572,15 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               require paymentStatus === 'paid' — payment may have been taken
               through another channel, so the action stays available. */}
           {auth.role === 'admin' && (() => {
-            const alreadyRefunded = lead.refundStatus === 'refunded';
-            const refundPending = lead.refundStatus === 'pending';
-            const canRefund = !alreadyRefunded && !refundPending;
-            const label = alreadyRefunded ? 'Refunded' : refundPending ? 'Refund pending' : 'Refund';
+            // Paytm may report "pending" while it processes async, but the
+            // money is on its way back — so a pending refund counts as
+            // refunded: the button reads "Refunded" and stays disabled.
+            const alreadyRefunded = lead.refundStatus === 'refunded' || lead.refundStatus === 'pending';
+            const canRefund = !alreadyRefunded;
+            const label = alreadyRefunded ? 'Refunded' : 'Refund';
             const tooltip = alreadyRefunded
               ? `Already refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
-              : refundPending
-                ? 'A refund is already pending at Paytm'
-                : 'Process a refund for this transaction';
+              : 'Process a refund for this transaction';
             return (
               <button
                 onClick={() => canRefund && setShowRefund(true)}
