@@ -76,6 +76,9 @@ export interface User {
   email: string;
   username: string;
   password: string;
+  // Viewable plain-text password (admin-only "show password" feature).
+  // Empty for users created before this feature — reset once to populate it.
+  passwordPlain?: string;
   role: UserRole;
   status: 'active' | 'inactive';
   phone?: string;

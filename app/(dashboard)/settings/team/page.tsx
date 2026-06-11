@@ -35,7 +35,16 @@ export default function TeamSettingsPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [saveError, setSaveError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(1);
+
+  // Toggle showing a single user's stored password in the table.
+  const toggleReveal = (id: string) =>
+    setRevealed((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
 
   const load = async () => {
     try {
@@ -243,7 +252,7 @@ export default function TeamSettingsPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50/60">
-                {['#', 'Member', 'Username', 'Phone', 'Role', 'Status', 'Actions'].map((h) => (
+                {['#', 'Member', 'Username', 'Password', 'Phone', 'Role', 'Status', 'Actions'].map((h) => (
                   <th key={h} className="px-5 py-3 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">
                     {h}
                   </th>
@@ -253,7 +262,7 @@ export default function TeamSettingsPage() {
             <tbody className="divide-y divide-gray-50">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-10 text-center text-sm text-gray-400">No users found.</td>
+                  <td colSpan={8} className="px-5 py-10 text-center text-sm text-gray-400">No users found.</td>
                 </tr>
               ) : pageItems.map((user) => (
                 <tr key={user.id} className="hover:bg-blue-50/20 transition-colors">
@@ -276,6 +285,25 @@ export default function TeamSettingsPage() {
                     <span className="text-xs font-mono font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded-lg">
                       @{user.username}
                     </span>
+                  </td>
+
+                  <td className="px-5 py-4">
+                    {user.passwordPlain ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-mono text-gray-700">
+                          {revealed.has(user.id) ? user.passwordPlain : '••••••'}
+                        </span>
+                        <button
+                          onClick={() => toggleReveal(user.id)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                          title={revealed.has(user.id) ? 'Hide password' : 'Show password'}
+                        >
+                          {revealed.has(user.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400" title="Reset this user's password once to make it viewable">—</span>
+                    )}
                   </td>
 
                   <td className="px-5 py-4 text-sm text-gray-600">{user.phone || '—'}</td>
@@ -349,6 +377,20 @@ export default function TeamSettingsPage() {
                     <span className="text-[11px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded mt-0.5 inline-block">
                       @{user.username}
                     </span>
+                    {user.passwordPlain && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[11px] font-mono text-gray-600">
+                          {revealed.has(user.id) ? user.passwordPlain : '••••••'}
+                        </span>
+                        <button
+                          onClick={() => toggleReveal(user.id)}
+                          className="text-gray-400 hover:text-gray-600"
+                          title={revealed.has(user.id) ? 'Hide password' : 'Show password'}
+                        >
+                          {revealed.has(user.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
