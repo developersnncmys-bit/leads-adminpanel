@@ -715,15 +715,64 @@ export function getSchema(input: Lead | string): ServiceSchema {
 
 /* ── Resolve a field value from lead + formData ──────────── */
 
+// Leads migrated from the old system store form values under the OLD field
+// names. Map the current schema keys to those legacy keys so migrated leads
+// still show every field. (Keys that only differ by case/underscores are
+// caught by the normalized fallback below, so only genuinely different names
+// need listing here.)
+const LEGACY_FIELD_ALIASES: Record<string, string[]> = {
+  givenName: ['givename'],
+  appType: ['applicationType'],
+  bookletType: ['passportBookletType'],
+  serviceType: ['services'],
+  aadhaar: ['adharnumber'],
+  printName: ['printOnPanCard'],
+  bizName: ['businessName'],
+  orgType: ['organisationType', 'typeoforganisation'],
+  incorpDate: ['dateOfIncorporation'],
+  bizPan: ['pancardproprietorownerpancardnumber'],
+  ownerFather: ['ownersfathername'],
+  tenantFather: ['tenantsfathername'],
+  dateOfBirth: ['dob'],
+  educationQualification: ['qualification'],
+  applyingFor: ['applying_for'],
+  nearbyPoliceStation: ['nearby_police_station'],
+};
+
+const normKey = (k: string) => k.toLowerCase().replace(/[^a-z0-9]/g, '');
+const isEmpty = (v: unknown) => v === undefined || v === null || v === '';
+
+// Look a value up in formData by the schema key, then known legacy aliases,
+// then any key whose normalized form matches (e.g. fatherName -> fathername).
+function lookupFormData(
+  formData: Record<string, unknown> | undefined,
+  key: string,
+): unknown {
+  if (!formData) return undefined;
+  if (!isEmpty(formData[key])) return formData[key];
+  for (const alias of LEGACY_FIELD_ALIASES[key] || []) {
+    if (!isEmpty(formData[alias])) return formData[alias];
+  }
+  const target = normKey(key);
+  for (const k of Object.keys(formData)) {
+    if (normKey(k) === target && !isEmpty(formData[k])) return formData[k];
+  }
+  return undefined;
+}
+
 export function resolveField(lead: Lead, field: FieldDef | null): string {
   if (!field || !field.key) return '—';
+  const leadObj = lead as unknown as Record<string, unknown>;
+  const formData = lead.formData as Record<string, unknown> | undefined;
   let raw: unknown;
   if (field.source === 'formData') {
-    raw = lead.formData?.[field.key] ?? (lead as unknown as Record<string, unknown>)[field.key];
+    raw = lookupFormData(formData, field.key);
+    if (isEmpty(raw)) raw = leadObj[field.key];
   } else {
-    raw = (lead as unknown as Record<string, unknown>)[field.key];
+    raw = leadObj[field.key];
+    if (isEmpty(raw)) raw = lookupFormData(formData, field.key);
   }
-  if (raw === undefined || raw === null || raw === '') return '—';
+  if (isEmpty(raw)) return '—';
   const str = String(raw);
   if (/^\d{4}-\d{2}-\d{2}/.test(str)) return formatDate(str);
   return str;
