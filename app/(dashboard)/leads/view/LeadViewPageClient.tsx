@@ -300,7 +300,10 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     api.getLead(leadId).then((l) => { if (active) setFullLead(l); }).catch(() => {});
     return () => { active = false; };
   }, [leadId]);
-  const lead = fullLead || contextLead;
+  // Until the full lead arrives, the lean context lead has no notes/formData —
+  // default them so the view never crashes reading `.length` / form fields.
+  const baseLead = fullLead || contextLead;
+  const lead = baseLead ? { ...baseLead, notes: baseLead.notes ?? [], formData: baseLead.formData ?? {} } : null;
   if (!lead) return notFound();
 
   const schema = lead.leadType === 'manual' ? MANUAL_SCHEMA : getSchema(lead);
