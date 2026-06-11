@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { MOCK_USERS } from '@/lib/mockData';
 import { STATUS_CONFIG } from '@/lib/constants';
-import { LeadStatus } from '@/lib/types';
+import { LeadStatus, Lead } from '@/lib/types';
 import { useAddLead } from '@/context/AddLeadContext';
 import { useAuthUser } from '@/lib/useAuthUser';
 import * as api from '@/lib/api';
@@ -288,7 +288,19 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const sp = useSearchParams();
   const { leads, updateLead, deleteLead, addNote } = useAddLead();
   const auth = useAuthUser();
-  const lead = leads.find((l) => l.id === leadId);
+
+  // The context list is lean (no formData) so the per-service form fields
+  // aren't there. Fetch the full lead and merge it over the lean version once
+  // it loads. (Hooks stay above the guard; the wrapper only renders this view
+  // when the lead exists in context, so `lead` is always defined here.)
+  const contextLead = leads.find((l) => l.id === leadId);
+  const [fullLead, setFullLead] = useState<Lead | null>(null);
+  useEffect(() => {
+    let active = true;
+    api.getLead(leadId).then((l) => { if (active) setFullLead(l); }).catch(() => {});
+    return () => { active = false; };
+  }, [leadId]);
+  const lead = fullLead || contextLead;
   if (!lead) return notFound();
 
   const schema = lead.leadType === 'manual' ? MANUAL_SCHEMA : getSchema(lead);

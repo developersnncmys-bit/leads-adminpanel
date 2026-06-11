@@ -21,6 +21,25 @@ export async function listLeads(): Promise<Lead[]> {
   return data.data;
 }
 
+// Full single lead (includes formData, which the list endpoint omits for size).
+// The detail view uses this so it can show every per-service form field.
+export async function getLead(id: string): Promise<Lead> {
+  const data = await request<{ data: Lead }>(`/leads/${id}`);
+  return data.data;
+}
+
+export interface LeadStats {
+  new: number; overdue: number; today: number; followup: number;
+  inprocess: number; converted: number; dead: number; total: number;
+}
+
+// Cheap counts (reads only tiny fields server-side). Used to detect new leads
+// without re-downloading the whole list every poll.
+export async function getLeadStats(): Promise<LeadStats> {
+  const data = await request<{ data: LeadStats }>('/leads/stats');
+  return data.data;
+}
+
 export async function createLead(payload: Partial<Lead>): Promise<Lead> {
   const data = await request<{ data: Lead }>('/leads', {
     method: 'POST',

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { Lead } from '@/lib/types';
 import * as api from '@/lib/api';
 import { useAuthUser } from '@/lib/useAuthUser';
@@ -37,13 +37,22 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Mirror of allLeads.length, kept in a ref so the poll can compare against it
+  // without re-creating the interval on every list change.
+  const countRef = useRef(0);
+  useEffect(() => { countRef.current = allLeads.length; }, [allLeads]);
+
+  // Full (lean) list fetch. The list endpoint omits formData, so this stays
+  // small even with ~18k leads. We only call it on first load and whenever the
+  // server-side count changes (see the stats poll below) — NOT every 10s, which
+  // would re-download megabytes repeatedly.
   const refresh = useCallback(async () => {
     try {
-      setAllLeads(await api.listLeads());
+      const leads = await api.listLeads();
+      setAllLeads(leads);
+      countRef.current = leads.length;
     } catch {
-      // Silent — keep showing the leads we already have. Console.error here
-      // would trigger Next.js's dev runtime overlay on every poll cycle
-      // whenever the API is briefly unreachable (cold start, offline, etc).
+      // Silent — keep showing the leads we already have.
     } finally {
       setLoading(false);
     }
@@ -51,22 +60,31 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Poll the API every 10 seconds so a lead submitted on the website rings
-  // the admin-panel chime within that window. .catch() is defensive: refresh
-  // already swallows its own errors, but we never want the unawaited promise
-  // here to surface as an unhandled rejection.
+  // Poll only the cheap stats every 10s. If the total lead count changed (a new
+  // website lead arrived, or one was removed), re-fetch the full list — which
+  // updates the chime/notifications. Otherwise we skip the heavy download.
   useEffect(() => {
-    const id = setInterval(() => { refresh().catch(() => {}); }, 10_000);
+    const check = async () => {
+      try {
+        const stats = await api.getLeadStats();
+        if (stats.total !== countRef.current) await refresh();
+      } catch {
+        // ignore transient errors (cold start / offline)
+      }
+    };
+    const id = setInterval(check, 10_000);
     return () => clearInterval(id);
   }, [refresh]);
 
-  // Browsers throttle setInterval in backgrounded tabs, so when the admin
-  // panel tab regains focus we kick a one-shot refresh immediately. That
-  // way switching back from another tab always shows the latest leads.
+  // When the tab regains focus, re-check immediately (background tabs throttle
+  // timers), refetching only if the count drifted.
   useEffect(() => {
-    const onVisible = () => {
+    const onVisible = async () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-        refresh().catch(() => {});
+        try {
+          const stats = await api.getLeadStats();
+          if (stats.total !== countRef.current) await refresh();
+        } catch { /* ignore */ }
       }
     };
     if (typeof document !== 'undefined') {
