@@ -1,7 +1,7 @@
 import type { Lead, User, Blog, Career } from './types';
 
 // Base URL of the MMD backend. Override with NEXT_PUBLIC_API_URL in production.
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://mmdbackend.onrender.com';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.makemydocuments.com';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}/api${path}`, {
