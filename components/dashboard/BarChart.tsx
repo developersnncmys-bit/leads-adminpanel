@@ -33,7 +33,6 @@ export default function BarChart({ data }: BarChartProps) {
           {data.map(({ label, value }, i) => {
             const barH = (value / max) * 100;
             const isHovered = hovered === i;
-            const isHighest = value === max && value > 0;
             return (
               <div
                 key={label}
@@ -61,7 +60,7 @@ export default function BarChart({ data }: BarChartProps) {
 
                 <div
                   className={`w-full max-w-[28px] rounded-t-md transition-colors ${
-                    isHovered ? 'bg-blue-700' : isHighest ? 'bg-blue-600' : 'bg-blue-200'
+                    isHovered ? 'bg-black' : 'bg-gray-800'
                   }`}
                   style={{ height: `${barH}%`, minHeight: value > 0 ? '3px' : '0' }}
                 />

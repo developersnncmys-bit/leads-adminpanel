@@ -333,6 +333,14 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
     // Goes through the dedicated POST /api/leads/:id/notes endpoint, which
     // $pushes one note so the timestamps of older notes stay intact.
     addNote(lead.id, text, author);
+    // The detail view renders `fullLead` (fetched separately), which addNote
+    // doesn't touch — so optimistically append the note here too, otherwise it
+    // only appears after a page refresh.
+    setFullLead((prev) =>
+      prev
+        ? { ...prev, notes: [...(prev.notes ?? []), { id: `temp-${Date.now()}`, text, author, createdAt: new Date().toISOString() }] }
+        : prev
+    );
   };
 
   // The pipeline the user came from (passed as ?from= when they clicked the
