@@ -243,8 +243,8 @@ export default function LeadTable({ leads }: Props) {
 </div>
       </div>
 
-      {/* Bulk action bar — shown when rows are selected */}
-      {selected.size > 0 && (
+      {/* Bulk action bar — shown when rows are selected. Admins only. */}
+      {isAdmin && selected.size > 0 && (
         <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border-b border-blue-100">
           <span className="text-sm font-semibold text-blue-700">{selected.size} lead{selected.size > 1 ? 's' : ''} selected</span>
           <button
@@ -269,15 +269,17 @@ export default function LeadTable({ leads }: Props) {
         <table className="w-full">
           <thead className="bg-gray-50/50">
             <tr>
-              <th className="pl-4 pr-2 py-3 w-10" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={filtered.length > 0 && filtered.every(l => selected.has(l.id))}
-                  ref={el => { if (el) el.indeterminate = filtered.some(l => selected.has(l.id)) && !filtered.every(l => selected.has(l.id)); }}
-                  onChange={() => toggleSelectAll(filtered)}
-                  className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
-                />
-              </th>
+              {isAdmin && (
+                <th className="pl-4 pr-2 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={filtered.length > 0 && filtered.every(l => selected.has(l.id))}
+                    ref={el => { if (el) el.indeterminate = filtered.some(l => selected.has(l.id)) && !filtered.every(l => selected.has(l.id)); }}
+                    onChange={() => toggleSelectAll(filtered)}
+                    className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                  />
+                </th>
+              )}
               <Th col="slNo" label="#" className="w-10 hidden xl:table-cell" />
               <Th col="date" label="Date" className="hidden lg:table-cell" />
               <Th col="name" label="Name" />
@@ -292,7 +294,7 @@ export default function LeadTable({ leads }: Props) {
           <tbody className="divide-y divide-gray-50">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={10} className="px-4 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={isAdmin ? 10 : 9} className="px-4 py-12 text-center text-gray-400 text-sm">
                   No leads found matching your search.
                 </td>
               </tr>
@@ -307,14 +309,16 @@ export default function LeadTable({ leads }: Props) {
                }}
                className={`hover:bg-blue-50/30 transition-colors group cursor-pointer ${selected.has(lead.id) ? 'bg-blue-50/50' : ''}`}
                >
-                  <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(lead.id)}
-                      onChange={() => toggleSelect(lead.id)}
-                      className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
-                    />
-                  </td>
+                  {isAdmin && (
+                    <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(lead.id)}
+                        onChange={() => toggleSelect(lead.id)}
+                        className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className="px-2 py-2 text-xs text-gray-500 font-medium hidden xl:table-cell">{index + 1}</td>
                   <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
                   <td className="px-2 py-2">

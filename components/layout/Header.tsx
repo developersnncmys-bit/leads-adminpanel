@@ -5,12 +5,10 @@ import { Search, Bell, Menu, Settings, ChevronDown, LogOut, UserCircle } from 'l
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import ProfileModal from './ProfileModal';
 import NotificationsModal from './NotificationsModal';
 
 export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
-  const router = useRouter();
   const [search, setSearch] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -77,9 +75,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   }, [leads]);
 
   const handleLogout = () => {
-    setShowProfile(false);
     localStorage.removeItem('crm-auth');
-    router.push('/login');
+    // Hard redirect (not router.push) so logout fires on the FIRST click and
+    // all in-memory state + the lead-polling context is fully torn down.
+    window.location.href = '/login';
   };
 
   const user = useAuthUser();

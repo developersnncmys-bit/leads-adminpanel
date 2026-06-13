@@ -72,11 +72,14 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
     try {
       const global = await api.getLeadStats();
       if (global.total !== countRef.current) await refresh();
+      // Don't show counts until we know who's logged in, otherwise an employee
+      // briefly sees the admin's (global) numbers before auth finishes loading.
+      if (!auth.role) { setStats(null); return; }
       setStats(scopeArg ? await api.getLeadStats(scopeArg) : global);
     } catch {
       // ignore transient errors (cold start / offline)
     }
-  }, [refresh, scopeArg]);
+  }, [refresh, scopeArg, auth.role]);
 
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { loadStats(); }, [loadStats]);
@@ -145,11 +148,14 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Employees only see leads assigned to them; admins (and the brief moment
-  // before auth loads) see everything.
-  const leads = (auth.role && auth.role !== 'admin')
-    ? allLeads.filter((l) => l.assignedTo === auth.name)
-    : allLeads;
+  // Until auth loads (role === ''), show NOTHING — otherwise an employee
+  // flashes the full admin list for a moment. Admin → everything;
+  // employee → only their own leads.
+  const leads = !auth.role
+    ? []
+    : auth.role === 'admin'
+      ? allLeads
+      : allLeads.filter((l) => l.assignedTo === auth.name);
 
   return (
     <AddLeadContext.Provider value={{
