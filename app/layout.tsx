@@ -11,7 +11,8 @@ export const viewport: Viewport = {
   themeColor: '#2563eb',
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: locking it to 1 triggers a Chrome device-mode re-layout
+  // glitch (page only fits after a refresh) and blocks pinch-zoom.
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
