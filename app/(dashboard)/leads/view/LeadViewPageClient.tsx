@@ -404,6 +404,14 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
         refundStatus: updated.refundStatus === 'failed' ? 'failed' : 'refunded',
         notes: updated.notes,
       } as Partial<typeof lead>);
+      // The detail view renders `fullLead`, so update it too — otherwise the
+      // new refund system-note only appears after a page refresh.
+      setFullLead((prev) => prev ? {
+        ...prev,
+        refundAmount: updated.refundAmount ?? amount,
+        refundStatus: updated.refundStatus === 'failed' ? 'failed' : 'refunded',
+        notes: updated.notes ?? prev.notes,
+      } : prev);
       // Single clean success modal instead of a browser "pending" alert.
       setRefundSuccess(amount);
     } catch (err) {

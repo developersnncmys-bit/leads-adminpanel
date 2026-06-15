@@ -264,9 +264,9 @@ export default function LeadTable({ leads }: Props) {
     <button
       onClick={exportCsv}
       title="Export these leads to CSV"
-      className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+      className="flex items-center gap-1.5 px-3 py-2.5 border border-blue-600 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
     >
-      <Download className="w-4 h-4 text-gray-400" />
+      <Download className="w-4 h-4 text-white" />
       Export
     </button>
 
