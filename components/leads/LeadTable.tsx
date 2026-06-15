@@ -112,6 +112,14 @@ export default function LeadTable({ leads }: Props) {
 
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
 
+  // Options for a lead's assign dropdown. Always include the lead's CURRENT
+  // assignee even if they're not in the employee list (e.g. names carried over
+  // from the old system) — otherwise the dropdown shows blank and looks broken.
+  const assignOptions = (current?: string) =>
+    current && current !== 'Unassigned' && !employees.includes(current)
+      ? [current, ...employees]
+      : employees;
+
   const handleSort = (key: keyof Lead) => {
     if (sortKey === key) setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
     else { setSortKey(key); setSortDir('asc'); }
@@ -378,7 +386,7 @@ export default function LeadTable({ leads }: Props) {
                         className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 cursor-pointer max-w-[8rem]"
                       >
                         <option value="Unassigned">Select assigned user</option>
-                        {employees.map((emp) => (
+                        {assignOptions(lead.assignedTo).map((emp) => (
                           <option key={emp} value={emp}>{emp}</option>
                         ))}
                       </select>
@@ -435,7 +443,7 @@ export default function LeadTable({ leads }: Props) {
                       className="text-[11px] font-medium border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 max-w-[8rem] truncate focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                     >
                       <option value="Unassigned">+ Assign</option>
-                      {employees.map((emp) => (
+                      {assignOptions(lead.assignedTo).map((emp) => (
                         <option key={emp} value={emp}>{emp}</option>
                       ))}
                     </select>
