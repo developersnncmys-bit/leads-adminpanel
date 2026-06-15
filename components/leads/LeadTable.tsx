@@ -224,13 +224,13 @@ export default function LeadTable({ leads }: Props) {
             className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-all"
           />
         </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
 
     {/* SERVICE FILTER */}
     <select
     value={serviceFilter}
     onChange={(e) => setServiceFilter(e.target.value)}
-    className="px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    className="w-full sm:w-auto min-w-0 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
     <option value="all">All Services</option>
     {SERVICES.map((s) => (
@@ -242,7 +242,7 @@ export default function LeadTable({ leads }: Props) {
     <select
     value={assignedFilter}
     onChange={(e) => setAssignedFilter(e.target.value)}
-    className="px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+    className="w-full sm:w-auto min-w-0 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
     >
     <option value="all">All Staff</option>
 
@@ -254,7 +254,7 @@ export default function LeadTable({ leads }: Props) {
     </select>
 
     {/* PAYMENT FILTER */}
-    <div className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-600">
+    <div className="w-full sm:w-auto min-w-0 flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-600">
     <Filter className="w-4 h-4 text-gray-400" />
 
     <select
@@ -272,7 +272,7 @@ export default function LeadTable({ leads }: Props) {
     <button
       onClick={exportCsv}
       title="Export these leads to CSV"
-      className="flex items-center gap-1.5 px-3 py-2.5 border border-blue-600 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+      className="w-full sm:w-auto justify-center flex items-center gap-1.5 px-3 py-2.5 border border-blue-600 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
     >
       <Download className="w-4 h-4 text-white" />
       Export
