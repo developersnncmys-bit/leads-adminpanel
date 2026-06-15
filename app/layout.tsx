@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MakeMyDocs CRM',
-  description: 'Lead management dashboard for MakeMyDocuments',
+  title: 'Make My Documents CRM',
+  description: 'Lead management dashboard for Make My Documents',
   manifest: '/manifest.json',
 };
 

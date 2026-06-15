@@ -60,7 +60,7 @@ export default function BarChart({ data }: BarChartProps) {
 
                 <div
                   className={`w-full max-w-[28px] rounded-t-md transition-colors ${
-                    isHovered ? 'bg-black' : 'bg-gray-800'
+                    isHovered ? 'bg-blue-700' : 'bg-blue-600'
                   }`}
                   style={{ height: `${barH}%`, minHeight: value > 0 ? '3px' : '0' }}
                 />

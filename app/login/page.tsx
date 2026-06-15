@@ -57,9 +57,11 @@ export default function LoginPage() {
 
         <div className="relative">
           <div className="flex items-center gap-3 mb-14">
-            <img src="/logo.png" alt="MakeMyDocuments" width={72} height={72} className="rounded-2xl" />
+            <div className="w-[72px] h-[72px] rounded-2xl bg-white flex items-center justify-center p-2 shadow-lg shadow-black/20">
+              <img src="/logo.png" alt="Make My Documents" className="w-full h-full object-contain" />
+            </div>
             <div>
-              <p className="text-white font-bold text-lg leading-tight tracking-tight">MakeMyDocuments</p>
+              <p className="text-white font-bold text-lg leading-tight tracking-tight">Make My Documents</p>
               <p className="text-blue-400 text-xs font-medium tracking-widest uppercase">CRM Lead Dashboard</p>
             </div>
           </div>
@@ -97,9 +99,9 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <img src="/logo.png" alt="MakeMyDocuments" width={56} height={56} className="rounded-2xl flex-shrink-0" />
+            <img src="/logo.png" alt="Make My Documents" width={56} height={56} className="rounded-2xl flex-shrink-0" />
             <div>
-              <p className="font-bold text-gray-900">MakeMyDocuments</p>
+              <p className="font-bold text-gray-900">Make My Documents</p>
               <p className="text-xs text-gray-500">CRM Lead Dashboard</p>
             </div>
           </div>
