@@ -288,6 +288,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const sp = useSearchParams();
   const { leads, updateLead, deleteLead, addNote } = useAddLead();
   const auth = useAuthUser();
+  const isAdmin = auth.role === 'admin';
+  // Refund is admin-only, PLUS the specific employee Ganesh (per request).
+  const mayRefund = isAdmin || auth.name === 'Ganesh';
 
   // The context list is lean (no formData) so the per-service form fields
   // aren't there. Fetch the full lead and merge it over the lean version once
@@ -594,7 +597,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               would wrongly lock the button after a failure. The button does NOT
               require paymentStatus === 'paid' — payment may have been taken
               through another channel, so the action stays available. */}
-          {auth.role === 'admin' && (() => {
+          {mayRefund && (() => {
             // Paytm may report "pending" while it processes async, but the
             // money is on its way back — so a pending refund counts as
             // refunded: the button reads "Refunded" and stays disabled.
@@ -621,13 +624,15 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             );
           })()}
 
-          {/* Delete */}
-          <div className="ml-auto">
-            <button onClick={handleDelete} title="Delete lead"
-              className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          {/* Delete — admin only */}
+          {isAdmin && (
+            <div className="ml-auto">
+              <button onClick={handleDelete} title="Delete lead"
+                className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

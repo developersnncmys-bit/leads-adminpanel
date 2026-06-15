@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Search, Filter, Trash2 } from 'lucide-react';
+import { Search, Filter, Trash2, Download } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
 import * as api from '@/lib/api';
@@ -170,6 +170,27 @@ export default function LeadTable({ leads }: Props) {
   useEffect(() => { setPage((p) => Math.min(p, Math.max(1, totalPages))); }, [totalPages]);
 
 
+  // Download the currently filtered leads as a CSV (opens in Excel/Sheets).
+  const exportCsv = () => {
+    const headers = ['Date', 'Name', 'Mobile', 'Email', 'District', 'Service', 'Amount', 'Payment', 'Status', 'Assigned To'];
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const lines = [headers.join(',')];
+    for (const l of filtered) {
+      lines.push([
+        l.date, l.name, l.mobileNumber, l.email, l.district, l.service,
+        l.amount, l.paymentStatus, l.status, l.assignedTo,
+      ].map(esc).join(','));
+    }
+    // BOM so Excel reads UTF-8 correctly.
+    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Sort-arrow icons removed from the header — clicking the th still sorts,
   // but the columns no longer carry a chevron indicator.
   const Th = ({ col, label, className = '' }: { col: keyof Lead; label: string; className?: string }) => (
@@ -239,6 +260,15 @@ export default function LeadTable({ leads }: Props) {
     </select>
    </div>
 
+    {/* EXPORT — downloads the currently filtered leads as CSV */}
+    <button
+      onClick={exportCsv}
+      title="Export these leads to CSV"
+      className="flex items-center gap-1.5 px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+    >
+      <Download className="w-4 h-4 text-gray-400" />
+      Export
+    </button>
 
 </div>
       </div>
