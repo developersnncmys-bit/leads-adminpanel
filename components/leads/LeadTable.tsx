@@ -455,12 +455,12 @@ export default function LeadTable({ leads }: Props) {
                 </div>
               </div>
               <p className="text-xs font-bold text-gray-700 mt-3">{formatDate(lead.date)}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 min-w-0 max-w-full">
                 <ServiceBadge service={lead.service} />
                 <span className="text-gray-300">·</span>
-                <span>{lead.district}</span>
+                <span className="truncate max-w-[45vw]">{lead.district}</span>
                 <span className="text-gray-300">·</span>
-                <span className="font-semibold text-gray-700">₹{lead.amount.toLocaleString('en-IN')}</span>
+                <span className="font-semibold text-gray-700 whitespace-nowrap">₹{lead.amount.toLocaleString('en-IN')}</span>
                 <PaymentBadge status={lead.paymentStatus} />
               </div>
             </div>
