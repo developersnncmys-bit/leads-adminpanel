@@ -357,7 +357,7 @@ export default function LeadTable({ leads }: Props) {
                       />
                     </td>
                   )}
-                  <td className="px-2 py-2 text-xs text-gray-500 font-medium hidden xl:table-cell">{index + 1}</td>
+                  <td className="px-2 py-2 text-xs text-gray-500 font-medium hidden xl:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
                   <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
                   <td className="px-2 py-2">
                     <div className="flex items-center gap-2 min-w-0">
