@@ -545,21 +545,6 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
           </div>
         </div>
 
-        {/* Action bar */}
-        <div className="bg-white px-6 py-4 border-t border-gray-100 flex flex-wrap items-center gap-2.5">
-
-          {/* Contact */}
-          <a href={`tel:${lead.mobileNumber}`}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold shadow-sm transition-all hover:shadow-md">
-            <Phone className="w-3.5 h-3.5" /> Call
-          </a>
-          <a href={`https://wa.me/91${lead.mobileNumber}`} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#1fbc5a] text-white text-sm font-semibold shadow-sm transition-all hover:shadow-md">
-            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white"><path d={WA_PATH} /></svg>
-            WhatsApp
-          </a>
-
-        </div>
       </div>
 
       {/* ── Body: form + sidebar ───────────────────────────────── */}
@@ -638,6 +623,19 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
       {/* ── Action bar (bottom) — all actions live here now ────── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-4 flex flex-wrap items-center gap-2.5">
+        {/* Contact */}
+        <a href={`tel:${lead.mobileNumber}`}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-900 hover:bg-gray-800 text-white text-sm font-semibold shadow-sm transition-all hover:shadow-md">
+          <Phone className="w-3.5 h-3.5" /> Call
+        </a>
+        <a href={`https://wa.me/91${lead.mobileNumber}`} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] hover:bg-[#1fbc5a] text-white text-sm font-semibold shadow-sm transition-all hover:shadow-md">
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-white"><path d={WA_PATH} /></svg>
+          WhatsApp
+        </a>
+
+        <div className="w-px h-5 bg-gray-200" />
+
         {/* Comment */}
         <button onClick={() => setShowComment(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all">
