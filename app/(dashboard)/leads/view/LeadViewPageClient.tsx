@@ -571,57 +571,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
       </div>
 
-      {/* ── Activity feed ─────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
-          <div className="flex items-center gap-2.5">
-            <MessageSquare className="w-4 h-4 text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-900">Activity</h2>
-            {lead.notes.length > 0 && (
-              <span className="text-[11px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full tabular-nums">
-                {lead.notes.length}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => setShowComment(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Comment
-          </button>
-        </div>
-
-        {lead.notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
-              <MessageSquare className="w-5 h-5 text-gray-300" />
-            </div>
-            <p className="text-sm text-gray-400">No activity yet</p>
-            <button onClick={() => setShowComment(true)} className="text-xs text-blue-600 font-medium hover:underline">Add first comment</button>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {lead.notes.map((note) => (
-              <div key={note.id} className="flex gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors">
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold text-slate-600">
-                  {note.author[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1.5">
-                    <span className="text-sm font-semibold text-gray-900">{note.author}</span>
-                    <span className="text-xs text-gray-400">
-                      {new Date(note.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{note.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* ── Action bar (bottom) — all actions live here now ────── */}
+      {/* ── Action bar — sits above the comments list ─────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-4 flex flex-wrap items-center gap-2.5">
         {/* Contact */}
         <a href={`tel:${lead.mobileNumber}`}
@@ -709,6 +659,56 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
               className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">
               <Trash2 className="w-4 h-4" />
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Activity feed — below the action buttons ──────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+          <div className="flex items-center gap-2.5">
+            <MessageSquare className="w-4 h-4 text-gray-400" />
+            <h2 className="text-sm font-semibold text-gray-900">Activity</h2>
+            {lead.notes.length > 0 && (
+              <span className="text-[11px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full tabular-nums">
+                {lead.notes.length}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowComment(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Add Comment
+          </button>
+        </div>
+
+        {lead.notes.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-14 gap-2">
+            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 text-gray-300" />
+            </div>
+            <p className="text-sm text-gray-400">No activity yet</p>
+            <button onClick={() => setShowComment(true)} className="text-xs text-blue-600 font-medium hover:underline">Add first comment</button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {lead.notes.map((note) => (
+              <div key={note.id} className="flex gap-4 px-6 py-4 hover:bg-gray-50/50 transition-colors">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold text-slate-600">
+                  {note.author[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1.5">
+                    <span className="text-sm font-semibold text-gray-900">{note.author}</span>
+                    <span className="text-xs text-gray-400">
+                      {new Date(note.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 leading-relaxed">{note.text}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
