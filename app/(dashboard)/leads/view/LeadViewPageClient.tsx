@@ -559,88 +559,6 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             WhatsApp
           </a>
 
-          <div className="w-px h-5 bg-gray-200" />
-
-          {/* Actions */}
-          <button onClick={() => setShowComment(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all">
-            <MessageSquare className="w-3.5 h-3.5" /> Comment
-          </button>
-          {/* Follow Up — hidden on dead & converted (terminal states) */}
-          {lead.status !== 'dead' && lead.status !== 'converted' && (
-            <button onClick={() => setShowFollowUp(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 hover:bg-amber-100 shadow-sm transition-all">
-              <Calendar className="w-3.5 h-3.5" /> Follow Up
-            </button>
-          )}
-
-          <div className="w-px h-5 bg-gray-200" />
-
-          {/* Status changers — visibility rules:
-              - Converted: terminal; no status-change buttons at all
-              - Dead: only "Converted" is shown so the lead can be resurrected
-              - All others: the standard set (with each button hiding its own current status) */}
-          {lead.status !== 'inprocess' && lead.status !== 'dead' && lead.status !== 'converted' && (
-            <button onClick={() => changeStatus('inprocess', 'In Process')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100">
-              In Process
-            </button>
-          )}
-          {lead.status !== 'converted' && (
-            <button onClick={() => changeStatus('converted', 'Converted')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100">
-              Converted
-            </button>
-          )}
-          {lead.status !== 'dead' && lead.status !== 'converted' && (
-            <button onClick={() => changeStatus('dead', 'Dead')}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200">
-              Dead
-            </button>
-          )}
-
-          {/* Refund — admin-only. Clickable unless it's already refunded or
-              mid-refund. Decision is based on refundStatus (NOT refundAmount):
-              a FAILED attempt also records an amount, so keying off the amount
-              would wrongly lock the button after a failure. The button does NOT
-              require paymentStatus === 'paid' — payment may have been taken
-              through another channel, so the action stays available. */}
-          {mayRefund && (() => {
-            // Paytm may report "pending" while it processes async, but the
-            // money is on its way back — so a pending refund counts as
-            // refunded: the button reads "Refunded" and stays disabled.
-            const alreadyRefunded = lead.refundStatus === 'refunded' || lead.refundStatus === 'pending';
-            const canRefund = !alreadyRefunded;
-            const label = alreadyRefunded ? 'Refunded' : 'Refund';
-            const tooltip = alreadyRefunded
-              ? `Already refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
-              : 'Process a refund for this transaction';
-            return (
-              <button
-                onClick={() => canRefund && setShowRefund(true)}
-                disabled={!canRefund}
-                title={tooltip}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold shadow-sm transition-all ${
-                  canRefund
-                    ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer'
-                    : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <IndianRupee className="w-3.5 h-3.5" />
-                {label}
-              </button>
-            );
-          })()}
-
-          {/* Delete — admin only */}
-          {isAdmin && (
-            <div className="ml-auto">
-              <button onClick={handleDelete} title="Delete lead"
-                className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
@@ -714,6 +632,85 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Action bar (bottom) — all actions live here now ────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-4 flex flex-wrap items-center gap-2.5">
+        {/* Comment */}
+        <button onClick={() => setShowComment(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:bg-gray-50 shadow-sm transition-all">
+          <MessageSquare className="w-3.5 h-3.5" /> Comment
+        </button>
+        {/* Follow Up — hidden on dead & converted (terminal states) */}
+        {lead.status !== 'dead' && lead.status !== 'converted' && (
+          <button onClick={() => setShowFollowUp(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 text-sm font-semibold text-amber-700 hover:bg-amber-100 shadow-sm transition-all">
+            <Calendar className="w-3.5 h-3.5" /> Follow Up
+          </button>
+        )}
+
+        <div className="w-px h-5 bg-gray-200" />
+
+        {/* Status changers — visibility rules:
+            - Converted: terminal; no status-change buttons at all
+            - Dead: only "Converted" is shown so the lead can be resurrected
+            - All others: the standard set (with each button hiding its own current status) */}
+        {lead.status !== 'inprocess' && lead.status !== 'dead' && lead.status !== 'converted' && (
+          <button onClick={() => changeStatus('inprocess', 'In Process')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-violet-50 border border-violet-200 text-violet-700 hover:bg-violet-100">
+            In Process
+          </button>
+        )}
+        {lead.status !== 'converted' && (
+          <button onClick={() => changeStatus('converted', 'Converted')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100">
+            Converted
+          </button>
+        )}
+        {lead.status !== 'dead' && lead.status !== 'converted' && (
+          <button onClick={() => changeStatus('dead', 'Dead')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold shadow-sm transition-all bg-gray-100 border border-gray-200 text-gray-600 hover:bg-gray-200">
+            Dead
+          </button>
+        )}
+
+        {/* Refund — admin-only (+ Ganesh). Clickable unless already refunded
+            or mid-refund. Decision is based on refundStatus (NOT refundAmount):
+            a FAILED attempt also records an amount, so keying off the amount
+            would wrongly lock the button after a failure. */}
+        {mayRefund && (() => {
+          const alreadyRefunded = lead.refundStatus === 'refunded' || lead.refundStatus === 'pending';
+          const canRefund = !alreadyRefunded;
+          const label = alreadyRefunded ? 'Refunded' : 'Refund';
+          const tooltip = alreadyRefunded
+            ? `Already refunded ₹${(lead.refundAmount || 0).toLocaleString('en-IN')}`
+            : 'Process a refund for this transaction';
+          return (
+            <button
+              onClick={() => canRefund && setShowRefund(true)}
+              disabled={!canRefund}
+              title={tooltip}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-semibold shadow-sm transition-all ${
+                canRefund
+                  ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 cursor-pointer'
+                  : 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed opacity-60'
+              }`}
+            >
+              <IndianRupee className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          );
+        })()}
+
+        {/* Delete — admin only */}
+        {isAdmin && (
+          <div className="ml-auto">
+            <button onClick={handleDelete} title="Delete lead"
+              className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
