@@ -162,6 +162,9 @@ const PAN_CARD: ServiceSchema = [
   ],
   ASSIGN_ROW,
   [
+    { label: 'PAN Number', key: 'existingPan', source: 'formData' },
+  ],
+  [
     { label: 'Gender',        key: 'gender',     source: 'formData' },
     { label: 'Date of Birth', key: 'dateOfBirth', source: 'formData' },
     { label: "Father's Name", key: 'fatherName',  source: 'formData' },

@@ -376,7 +376,7 @@ export default function LeadTable({ leads }: Props) {
                     ₹{lead.amount.toLocaleString('en-IN')}
                   </td>
                   <td className="px-2 py-2">
-                    <PaymentBadge status={lead.paymentStatus} />
+                    <PaymentBadge status={lead.paymentStatus} refundStatus={(lead as any).refundStatus} />
                   </td>
                   <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
                     {isAdmin ? (
@@ -461,7 +461,7 @@ export default function LeadTable({ leads }: Props) {
                 <span className="truncate max-w-[45vw]">{lead.district}</span>
                 <span className="text-gray-300">·</span>
                 <span className="font-semibold text-gray-700 whitespace-nowrap">₹{lead.amount.toLocaleString('en-IN')}</span>
-                <PaymentBadge status={lead.paymentStatus} />
+                <PaymentBadge status={lead.paymentStatus} refundStatus={(lead as any).refundStatus} />
               </div>
             </div>
           ))

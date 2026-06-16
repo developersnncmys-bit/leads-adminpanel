@@ -65,10 +65,10 @@ export const STATUS_CONFIG: Record<
   },
   overdue: {
     label: 'Overdue',
-    color: 'text-red-700',
-    bg: 'bg-red-50',
-    border: 'border-red-200',
-    dot: 'bg-red-500',
+    color: 'text-gray-600',
+    bg: 'bg-gray-100',
+    border: 'border-gray-200',
+    dot: 'bg-gray-400',
   },
   today: {
     label: "Today's Follow-up",
@@ -100,10 +100,10 @@ export const STATUS_CONFIG: Record<
   },
   dead: {
     label: 'Dead',
-    color: 'text-gray-600',
-    bg: 'bg-gray-100',
-    border: 'border-gray-200',
-    dot: 'bg-gray-400',
+    color: 'text-red-700',
+    bg: 'bg-red-50',
+    border: 'border-red-200',
+    dot: 'bg-red-500',
   },
 };
 

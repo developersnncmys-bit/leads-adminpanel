@@ -31,7 +31,7 @@ const PIPELINE_TABS = [
   {
     key: 'overdue',
     label: 'Current Overdue',
-    color: 'from-red-500 to-red-600',
+    color: 'from-gray-400 to-gray-500',
     href: '/leads/overdue',
     icon: AlertCircle,
   },
@@ -86,12 +86,12 @@ export default function DashboardPage() {
 
   const donutData = [
     { label: 'Active New Leads', value: stats.new, color: '#3b82f6' },
-    { label: 'Current Overdue', value: stats.overdue, color: '#ef4444' },
+    { label: 'Current Overdue', value: stats.overdue, color: '#9ca3af' },
     { label: "Today's Follow-up", value: stats.today, color: '#14b8a6' },
     { label: 'Pending Follow-up', value: stats.followup, color: '#f59e0b' },
     { label: 'In Process', value: stats.inprocess, color: '#8b5cf6' },
     { label: 'Total Converted', value: stats.converted, color: '#10b981' },
-    { label: 'Dead Leads', value: stats.dead, color: '#d1d5db' },
+    { label: 'Dead Leads', value: stats.dead, color: '#ef4444' },
   ];
 
   // Track total + converted per service so we can show the conversion rate

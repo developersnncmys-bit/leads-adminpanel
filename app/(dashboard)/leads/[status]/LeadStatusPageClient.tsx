@@ -21,12 +21,12 @@ const STATUS_META: Record<LeadStatus, {
   description: string;
 }> = {
   new:       { icon: UserPlus,      gradient: 'from-blue-500 to-blue-600',      lightBg: 'bg-blue-50',    textColor: 'text-blue-600',    description: 'Leads waiting to be contacted' },
-  overdue:   { icon: AlertCircle,   gradient: 'from-red-500 to-red-600',        lightBg: 'bg-red-50',     textColor: 'text-red-600',     description: 'Past their follow-up date' },
+  overdue:   { icon: AlertCircle,   gradient: 'from-gray-400 to-gray-500',      lightBg: 'bg-gray-100',   textColor: 'text-gray-500',    description: 'Past their follow-up date' },
   today:     { icon: CalendarCheck, gradient: 'from-teal-500 to-teal-600',      lightBg: 'bg-teal-50',    textColor: 'text-teal-600',    description: 'Scheduled for follow-up today' },
   followup:  { icon: UserCheck,     gradient: 'from-amber-400 to-amber-500',    lightBg: 'bg-amber-50',   textColor: 'text-amber-600',   description: 'Awaiting follow-up' },
   inprocess: { icon: Clock,         gradient: 'from-violet-500 to-violet-600',  lightBg: 'bg-violet-50',  textColor: 'text-violet-600',  description: 'Documents being processed' },
   converted: { icon: CheckCircle,   gradient: 'from-emerald-500 to-emerald-600',lightBg: 'bg-emerald-50', textColor: 'text-emerald-600', description: 'Successfully converted leads' },
-  dead:      { icon: XCircle,       gradient: 'from-gray-400 to-gray-500',      lightBg: 'bg-gray-100',   textColor: 'text-gray-500',    description: 'Leads that did not convert' },
+  dead:      { icon: XCircle,       gradient: 'from-red-500 to-red-600',        lightBg: 'bg-red-50',     textColor: 'text-red-600',     description: 'Leads that did not convert' },
 };
 
 export default function LeadStatusPageClient({ params }: { params: Promise<{ status: string }> }) {
