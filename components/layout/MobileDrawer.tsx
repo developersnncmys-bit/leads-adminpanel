@@ -10,12 +10,12 @@ import { useAuthUser } from '@/lib/useAuthUser';
 
 const LEAD_NAV = [
   { href: '/leads/new',       label: 'New Leads',         icon: UserPlus,      key: 'new',       dot: '#3b82f6' },
-  { href: '/leads/overdue',   label: 'Overdue',            icon: AlertCircle,   key: 'overdue',   dot: '#ef4444' },
+  { href: '/leads/overdue',   label: 'Overdue',            icon: AlertCircle,   key: 'overdue',   dot: '#9ca3af' },
   { href: '/leads/today',     label: "Today's Follow-up",  icon: CalendarCheck, key: 'today',     dot: '#14b8a6' },
   { href: '/leads/followup',  label: 'Pending Follow-up',  icon: UserCheck,     key: 'followup',  dot: '#f59e0b' },
   { href: '/leads/inprocess', label: 'In Process',         icon: Clock,         key: 'inprocess', dot: '#06b6d4' },
   { href: '/leads/converted', label: 'Converted',          icon: CheckCircle,   key: 'converted', dot: '#10b981' },
-  { href: '/leads/dead',      label: 'Dead Leads',         icon: XCircle,       key: 'dead',      dot: '#9ca3af' },
+  { href: '/leads/dead',      label: 'Dead Leads',         icon: XCircle,       key: 'dead',      dot: '#ef4444' },
 ];
 
 export default function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
