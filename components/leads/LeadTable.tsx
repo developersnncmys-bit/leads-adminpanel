@@ -357,18 +357,18 @@ export default function LeadTable({ leads }: Props) {
                       />
                     </td>
                   )}
-                  <td className="px-2 py-2 text-xs text-gray-500 font-medium hidden xl:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
-                  <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
+                  <td className="px-2 py-2 text-xs text-gray-800 font-semibold hidden xl:table-cell">{(page - 1) * PAGE_SIZE + index + 1}</td>
+                  <td className="px-2 py-2 text-xs text-gray-800 font-semibold whitespace-nowrap hidden lg:table-cell">{formatDate(lead.date)}</td>
                   <td className="px-2 py-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-blue-600 text-[10px] font-bold">{lead.name[0]}</span>
                       </div>
-                      <span className="text-xs font-semibold text-gray-900 truncate">{lead.name}</span>
+                      <span className="text-xs font-bold text-gray-900 truncate">{lead.name}</span>
                     </div>
                   </td>
-                  <td className="px-2 py-2 text-xs text-gray-700 font-medium whitespace-nowrap">{lead.mobileNumber}</td>
-                  <td className="px-2 py-2 text-xs text-gray-600 whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
+                  <td className="px-2 py-2 text-xs text-gray-900 font-semibold whitespace-nowrap">{lead.mobileNumber}</td>
+                  <td className="px-2 py-2 text-xs text-gray-800 font-semibold whitespace-nowrap hidden xl:table-cell">{lead.district}</td>
                   <td className="px-2 py-2 max-w-[10rem]">
                     <ServiceBadge service={lead.service} />
                   </td>
@@ -391,7 +391,7 @@ export default function LeadTable({ leads }: Props) {
                         ))}
                       </select>
                     ) : (
-                      <span className="text-xs font-medium text-gray-700 truncate inline-block max-w-[8rem]">
+                      <span className="text-xs font-semibold text-gray-900 truncate inline-block max-w-[8rem]">
                         {lead.assignedTo && lead.assignedTo !== 'Unassigned' ? lead.assignedTo : 'Unassigned'}
                       </span>
                     )}
@@ -425,8 +425,8 @@ export default function LeadTable({ leads }: Props) {
                     <span className="text-blue-600 font-bold">{lead.name[0]}</span>
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-gray-900 truncate">{lead.name}</p>
-                    <p className="text-sm text-gray-500">{lead.mobileNumber}</p>
+                    <p className="font-bold text-gray-900 truncate">{lead.name}</p>
+                    <p className="text-sm font-semibold text-gray-800">{lead.mobileNumber}</p>
                   </div>
                 </div>
                 {/* Right cluster: assign. stopPropagation so picking an
@@ -455,12 +455,12 @@ export default function LeadTable({ leads }: Props) {
                 </div>
               </div>
               <p className="text-xs font-bold text-gray-700 mt-3">{formatDate(lead.date)}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500 min-w-0 max-w-full">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-800 min-w-0 max-w-full">
                 <ServiceBadge service={lead.service} />
                 <span className="text-gray-300">·</span>
                 <span className="truncate max-w-[45vw]">{lead.district}</span>
                 <span className="text-gray-300">·</span>
-                <span className="font-semibold text-gray-700 whitespace-nowrap">₹{lead.amount.toLocaleString('en-IN')}</span>
+                <span className="font-bold text-gray-900 whitespace-nowrap">₹{lead.amount.toLocaleString('en-IN')}</span>
                 <PaymentBadge status={lead.paymentStatus} refundStatus={(lead as any).refundStatus} />
               </div>
             </div>
