@@ -50,6 +50,13 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   const countRef = useRef(0);
   useEffect(() => { countRef.current = allLeads.length; }, [allLeads]);
 
+  // Last-seen follow-up bucket signature. The overdue/today/followup buckets are
+  // derived from each lead's follow-up date, so a lead can move (followup→today
+  // →overdue, e.g. at midnight) WITHOUT the total changing. We must re-fetch the
+  // list then too — otherwise the tab count (from fresh stats) shows leads but
+  // the tab list (stale cached array) is empty.
+  const bucketRef = useRef('');
+
   // Full (lean) list fetch. The list endpoint omits formData, so this stays
   // small even with ~18k leads. We only call it on first load and whenever the
   // server-side count changes — NOT every 10s, which would re-download MBs.
@@ -71,7 +78,11 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
   const loadStats = useCallback(async () => {
     try {
       const global = await api.getLeadStats();
-      if (global.total !== countRef.current) await refresh();
+      const bucketSig = `${global.overdue}-${global.today}-${global.followup}`;
+      if (global.total !== countRef.current || bucketSig !== bucketRef.current) {
+        await refresh();
+      }
+      bucketRef.current = bucketSig;
       // Don't show counts until we know who's logged in, otherwise an employee
       // briefly sees the admin's (global) numbers before auth finishes loading.
       if (!auth.role) { setStats(null); return; }
