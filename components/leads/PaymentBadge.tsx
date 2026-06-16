@@ -8,7 +8,9 @@ export default function PaymentBadge({
   refundStatus?: string;
 }) {
   // A refunded lead was paid first — show "Refunded" instead of "Paid".
-  if (refundStatus === 'refunded') {
+  // Paytm may report "pending" while it processes the refund async, but the
+  // money is on its way back, so treat pending as refunded (same as the detail).
+  if (refundStatus === 'refunded' || refundStatus === 'pending') {
     return (
       <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-100">
         Refunded
