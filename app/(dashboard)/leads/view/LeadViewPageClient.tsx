@@ -556,15 +556,16 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
             <h2 className="text-sm font-semibold text-gray-900">Lead Information</h2>
             <p className="text-xs text-gray-400 mt-0.5">Details submitted with this lead</p>
           </div>
-          <div className="p-6 space-y-4">
-            {schema.map((row, ri) => (
-              <div key={ri} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {row.map((fieldDef, ci) =>
-                  fieldDef
-                    ? <ReadOnlyField key={ci} label={fieldDef.label} value={resolveField(lead, fieldDef)} />
-                    : <div key={ci} />
-                )}
-              </div>
+          {/* One continuous grid (not row-by-row) so fields pack tightly and
+              single fields like PAN Number / Transaction Id don't leave big
+              empty gaps. Empty (null) layout cells are dropped. */}
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {schema.flat().filter(Boolean).map((fieldDef, i) => (
+              <ReadOnlyField
+                key={i}
+                label={(fieldDef as { label: string }).label}
+                value={resolveField(lead, fieldDef)}
+              />
             ))}
           </div>
         </div>
