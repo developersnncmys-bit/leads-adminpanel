@@ -14,9 +14,14 @@ export type ServiceSchema = FieldRow[];
 
 const META: FieldRow[] = [
   [
-    { label: 'Date',     key: 'date'    },
-    { label: 'Time',     key: 'time'    },
-    { label: 'Order Id', key: 'orderId' },
+    { label: 'Date',           key: 'date'       },
+    { label: 'Time',           key: 'time'       },
+    { label: 'Order Id',       key: 'orderId'    },
+  ],
+  [
+    { label: 'Transaction Id', key: 'paytmTxnId' },
+    null,
+    null,
   ],
 ];
 
