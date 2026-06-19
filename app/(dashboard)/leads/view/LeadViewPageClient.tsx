@@ -289,8 +289,9 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
   const { leads, updateLead, deleteLead, addNote } = useAddLead();
   const auth = useAuthUser();
   const isAdmin = auth.role === 'admin';
-  // Refund is admin-only, PLUS the specific employee Ganesh (per request).
+  // Refund + delete are admin-only, PLUS the specific employee Ganesh (per request).
   const mayRefund = isAdmin || auth.name === 'Ganesh';
+  const mayDelete = isAdmin || auth.name === 'Ganesh';
 
   // The context list is lean (no formData) so the per-service form fields
   // aren't there. Fetch the full lead and merge it over the lean version once
@@ -653,8 +654,8 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
           );
         })()}
 
-        {/* Delete — admin only */}
-        {isAdmin && (
+        {/* Delete — admin + Ganesh */}
+        {mayDelete && (
           <div className="ml-auto">
             <button onClick={handleDelete} title="Delete lead"
               className="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-all shadow-sm">

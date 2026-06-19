@@ -82,6 +82,9 @@ export interface User {
   role: UserRole;
   status: 'active' | 'inactive';
   phone?: string;
+  // Services + states this user handles — used to auto-assign new leads.
+  services?: string[];
+  states?: string[];
   createdAt: string;
 }
 

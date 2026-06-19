@@ -29,6 +29,8 @@ export default function LeadTable({ leads }: Props) {
   // read-only text — the dropdown is hidden for them.
   const auth = useAuthUser();
   const isAdmin = auth.role === 'admin';
+  // Delete (select + bulk delete) is admin-only PLUS the employee Ganesh.
+  const mayDelete = isAdmin || auth.name === 'Ganesh';
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<keyof Lead>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -281,8 +283,8 @@ export default function LeadTable({ leads }: Props) {
 </div>
       </div>
 
-      {/* Bulk action bar — shown when rows are selected. Admins only. */}
-      {isAdmin && selected.size > 0 && (
+      {/* Bulk action bar — shown when rows are selected. Admin + Ganesh. */}
+      {mayDelete && selected.size > 0 && (
         <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border-b border-blue-100">
           <span className="text-sm font-semibold text-blue-700">{selected.size} lead{selected.size > 1 ? 's' : ''} selected</span>
           <button
@@ -307,7 +309,7 @@ export default function LeadTable({ leads }: Props) {
         <table className="w-full">
           <thead className="bg-gray-50/50">
             <tr>
-              {isAdmin && (
+              {mayDelete && (
                 <th className="pl-4 pr-2 py-3 w-10" onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
@@ -332,7 +334,7 @@ export default function LeadTable({ leads }: Props) {
           <tbody className="divide-y divide-gray-50">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={isAdmin ? 10 : 9} className="px-4 py-12 text-center text-gray-400 text-sm">
+                <td colSpan={mayDelete ? 10 : 9} className="px-4 py-12 text-center text-gray-400 text-sm">
                   No leads found matching your search.
                 </td>
               </tr>
@@ -347,7 +349,7 @@ export default function LeadTable({ leads }: Props) {
                }}
                className={`hover:bg-blue-50/30 transition-colors group cursor-pointer ${selected.has(lead.id) ? 'bg-blue-50/50' : ''}`}
                >
-                  {isAdmin && (
+                  {mayDelete && (
                     <td className="pl-4 pr-2 py-3" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"

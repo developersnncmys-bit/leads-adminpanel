@@ -8,6 +8,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { User, UserRole } from '@/lib/types';
+import { SERVICES, STATES } from '@/lib/constants';
 import * as api from '@/lib/api';
 import Pagination from '@/components/Pagination';
 
@@ -20,11 +21,13 @@ interface UserForm {
   role: UserRole;
   username: string;
   password: string;
+  services: string[];
+  states: string[];
 }
 
 type FormErrors = Partial<Record<keyof UserForm, string>>;
 
-const INITIAL_FORM: UserForm = { name: '', email: '', phone: '', role: 'employee', username: '', password: '' };
+const INITIAL_FORM: UserForm = { name: '', email: '', phone: '', role: 'employee', username: '', password: '', services: [], states: [] };
 
 export default function TeamSettingsPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -65,6 +68,13 @@ export default function TeamSettingsPage() {
   const set = (key: keyof UserForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  // Toggle a service/state in or out of the user's handled list.
+  const toggleIn = (key: 'services' | 'states', value: string) =>
+    setForm((f) => {
+      const has = f[key].includes(value);
+      return { ...f, [key]: has ? f[key].filter((v) => v !== value) : [...f[key], value] };
+    });
+
   const openAdd = () => {
     setEditingUser(null);
     setForm(INITIAL_FORM);
@@ -76,7 +86,7 @@ export default function TeamSettingsPage() {
 
   const openEdit = (user: User) => {
     setEditingUser(user);
-    setForm({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, username: user.username, password: '' });
+    setForm({ name: user.name, email: user.email, phone: user.phone || '', role: user.role, username: user.username, password: '', services: user.services || [], states: user.states || [] });
     setErrors({});
     setSaveError('');
     setShowPassword(false);
@@ -114,6 +124,8 @@ export default function TeamSettingsPage() {
       phone: form.phone,
       role: form.role,
       username: form.username.trim(),
+      services: form.services,
+      states: form.states,
       ...(form.password ? { password: form.password } : {}),
     };
     try {
@@ -542,6 +554,52 @@ export default function TeamSettingsPage() {
                         {r === 'admin' ? 'Admin' : 'Employee'}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Services handled — new leads for these auto-assign to this user */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Services Handled
+                    <span className="text-xs text-gray-400 font-normal ml-1">— new leads for these auto-assign here</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {SERVICES.map((s) => {
+                      const on = form.services.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => toggleIn('services', s)}
+                          className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${on ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* States handled — empty = all states */}
+                <div className="col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    States Handled
+                    <span className="text-xs text-gray-400 font-normal ml-1">— leave empty for all states</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-0.5">
+                    {STATES.map((s) => {
+                      const on = form.states.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => toggleIn('states', s)}
+                          className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'}`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
