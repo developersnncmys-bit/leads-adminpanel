@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, Settings, ChevronDown, LogOut, UserCircle } from 'lucide-react';
+import { Search, Bell, Menu, ChevronDown, LogOut, UserCircle } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { useAddLead } from '@/context/AddLeadContext';
 import Link from 'next/link';
@@ -169,7 +169,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             value={search}
             onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
             onFocus={() => search.length > 1 && setShowResults(true)}
-            onBlur={() => setTimeout(() => setShowResults(false), 150)}
+            onBlur={() => setTimeout(() => setShowResults(false), 250)}
             className="w-full pl-10 pr-4 py-2.5 text-sm bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all placeholder-gray-400"
           />
           {showResults && search.length > 1 && results.length > 0 && (
@@ -178,6 +178,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 <Link
                   key={lead.id}
                   href={`/leads/view?id=${lead.id}`}
+                  // Prevent the input's onBlur from firing first and hiding this
+                  // dropdown before the click registers (the "click sometimes
+                  // does nothing" bug).
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => { setSearch(''); setShowResults(false); }}
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                 >
