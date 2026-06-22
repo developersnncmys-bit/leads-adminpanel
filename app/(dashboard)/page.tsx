@@ -112,7 +112,8 @@ export default function DashboardPage() {
   }));
 
   // Leads Overview chart range filter.
-  const [range, setRange] = useState<'1m' | '3m' | '6m' | '12m' | 'all'>('all');
+  const thisYear = new Date().getFullYear();
+  const [range, setRange] = useState<'1m' | '3m' | '6m' | '12m' | 'year' | 'all'>('all');
   const [rangeOpen, setRangeOpen] = useState(false);
   const rangeRef = useRef<HTMLDivElement>(null);
   const RANGE_OPTS: { key: typeof range; label: string }[] = [
@@ -120,6 +121,7 @@ export default function DashboardPage() {
     { key: '3m', label: 'Last 3 Months' },
     { key: '6m', label: 'Last 6 Months' },
     { key: '12m', label: 'Last 12 Months' },
+    { key: 'year', label: `This Year (${thisYear})` },
     { key: 'all', label: 'All Time' },
   ];
   const rangeLabel = RANGE_OPTS.find((o) => o.key === range)?.label || '';
@@ -152,6 +154,18 @@ export default function DashboardPage() {
           }).length,
         };
       });
+    }
+
+    if (range === 'year') {
+      // This calendar year, Jan–Dec.
+      return MONTHS.map((label, m) => ({
+        label,
+        tip: `${label} ${now.getFullYear()}`,
+        value: leads.filter((l) => {
+          const c = new Date(l.createdAt);
+          return c.getFullYear() === now.getFullYear() && c.getMonth() === m;
+        }).length,
+      }));
     }
 
     // Monthly buckets. For "all", span from the earliest lead month to now
@@ -191,6 +205,7 @@ export default function DashboardPage() {
     : range === '3m' ? 'Monthly lead activity — last 3 months'
     : range === '6m' ? 'Monthly lead activity — last 6 months'
     : range === '12m' ? 'Monthly lead activity — last 12 months'
+    : range === 'year' ? `Monthly lead activity — ${thisYear}`
     : 'Monthly lead activity — all time';
 
   const [greeting, setGreeting] = useState('');
