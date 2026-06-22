@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import {
   UserPlus,
@@ -11,6 +11,9 @@ import {
   CheckCircle,
   ArrowRight,
   FileText,
+  Calendar,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 
 import { useAuthUser } from '@/lib/useAuthUser';
@@ -108,14 +111,27 @@ export default function DashboardPage() {
     converted: s.converted,
   }));
 
-  // Leads Overview chart range filter: 1 month (daily) / 3 / 6 / 12 months.
+  // Leads Overview chart range filter.
+  const thisYear = new Date().getFullYear();
   const [range, setRange] = useState<'1m' | '3m' | '6m' | '1y'>('1y');
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const rangeRef = useRef<HTMLDivElement>(null);
   const RANGE_OPTS: { key: typeof range; label: string }[] = [
-    { key: '1m', label: '1 Month' },
-    { key: '3m', label: '3 Months' },
-    { key: '6m', label: '6 Months' },
-    { key: '1y', label: '1 Year' },
+    { key: '1m', label: 'Last 30 Days' },
+    { key: '3m', label: 'Last 3 Months' },
+    { key: '6m', label: 'Last 6 Months' },
+    { key: '1y', label: `This Year (${thisYear})` },
   ];
+  const rangeLabel = RANGE_OPTS.find((o) => o.key === range)?.label || '';
+
+  // Close the range dropdown on outside click.
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (rangeRef.current && !rangeRef.current.contains(e.target as Node)) setRangeOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, []);
 
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -138,8 +154,18 @@ export default function DashboardPage() {
         }).length,
       }));
     }
-    // Rolling monthly buckets for 3 / 6 / 12 months.
-    const months = range === '3m' ? 3 : range === '6m' ? 6 : 12;
+    if (range === '1y') {
+      // This calendar year, Jan–Dec.
+      return MONTHS.map((label, i) => ({
+        label,
+        value: leads.filter((l) => {
+          const d = new Date(l.createdAt);
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === i;
+        }).length,
+      }));
+    }
+    // Rolling monthly buckets for the last 3 / 6 months.
+    const months = range === '3m' ? 3 : 6;
     const buckets: { label: string; y: number; m: number }[] = [];
     for (let i = months - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -158,7 +184,7 @@ export default function DashboardPage() {
     range === '1m' ? 'Daily lead activity — last 30 days'
     : range === '3m' ? 'Monthly lead activity — last 3 months'
     : range === '6m' ? 'Monthly lead activity — last 6 months'
-    : 'Monthly lead activity — last 12 months';
+    : `Monthly lead activity — ${thisYear}`;
 
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
@@ -228,19 +254,36 @@ export default function DashboardPage() {
             <h2 className="font-bold text-gray-900 text-base">Leads Overview</h2>
             <p className="text-xs text-gray-400 mt-1">{rangeSubtitle}</p>
           </div>
-          {/* Range filter */}
-          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 self-start">
-            {RANGE_OPTS.map((o) => (
-              <button
-                key={o.key}
-                onClick={() => setRange(o.key)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                  range === o.key ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
+          {/* Range filter — dropdown */}
+          <div className="relative self-start" ref={rangeRef}>
+            <button
+              onClick={() => setRangeOpen((v) => !v)}
+              className="flex items-center gap-2 pl-3 pr-2.5 py-2 rounded-xl border border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/40 text-sm font-semibold text-gray-700 transition-colors shadow-sm"
+            >
+              <Calendar className="w-4 h-4 text-blue-600" />
+              <span>{rangeLabel}</span>
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${rangeOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {rangeOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl border border-gray-100 shadow-xl z-30 overflow-hidden p-1">
+                {RANGE_OPTS.map((o) => {
+                  const active = range === o.key;
+                  return (
+                    <button
+                      key={o.key}
+                      onClick={() => { setRange(o.key); setRangeOpen(false); }}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        active ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span>{o.label}</span>
+                      {active && <Check className="w-4 h-4 text-blue-600" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
         <BarChart data={monthlyData} />
