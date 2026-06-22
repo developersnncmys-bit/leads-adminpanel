@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import {
   UserPlus,
@@ -108,15 +108,57 @@ export default function DashboardPage() {
     converted: s.converted,
   }));
 
+  // Leads Overview chart range filter: 1 month (daily) / 3 / 6 / 12 months.
+  const [range, setRange] = useState<'1m' | '3m' | '6m' | '1y'>('1y');
+  const RANGE_OPTS: { key: typeof range; label: string }[] = [
+    { key: '1m', label: '1 Month' },
+    { key: '3m', label: '3 Months' },
+    { key: '6m', label: '6 Months' },
+    { key: '1y', label: '1 Year' },
+  ];
+
   const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const now = new Date();
-  const monthlyData = MONTHS.map((label, i) => ({
-    label,
-    value: leads.filter((l) => {
-      const d = new Date(l.createdAt);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === i;
-    }).length,
-  }));
+
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    if (range === '1m') {
+      // Last 30 days, one bar per day.
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+      const days: { label: string; from: number; to: number }[] = [];
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+        days.push({ label: String(d.getDate()), from: d.getTime(), to: next.getTime() });
+      }
+      return days.map((b) => ({
+        label: b.label,
+        value: leads.filter((l) => {
+          const t = new Date(l.createdAt).getTime();
+          return t >= b.from && t < b.to;
+        }).length,
+      }));
+    }
+    // Rolling monthly buckets for 3 / 6 / 12 months.
+    const months = range === '3m' ? 3 : range === '6m' ? 6 : 12;
+    const buckets: { label: string; y: number; m: number }[] = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      buckets.push({ label: MONTHS[d.getMonth()], y: d.getFullYear(), m: d.getMonth() });
+    }
+    return buckets.map((b) => ({
+      label: b.label,
+      value: leads.filter((l) => {
+        const d = new Date(l.createdAt);
+        return d.getFullYear() === b.y && d.getMonth() === b.m;
+      }).length,
+    }));
+  }, [leads, range]);
+
+  const rangeSubtitle =
+    range === '1m' ? 'Daily lead activity — last 30 days'
+    : range === '3m' ? 'Monthly lead activity — last 3 months'
+    : range === '6m' ? 'Monthly lead activity — last 6 months'
+    : 'Monthly lead activity — last 12 months';
 
   const [greeting, setGreeting] = useState('');
   useEffect(() => {
@@ -181,9 +223,25 @@ export default function DashboardPage() {
 
       {/* LEADS OVERVIEW — full width */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <div className="mb-5">
-          <h2 className="font-bold text-gray-900 text-base">Leads Overview</h2>
-          <p className="text-xs text-gray-400 mt-1">Monthly lead activity this year</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+          <div>
+            <h2 className="font-bold text-gray-900 text-base">Leads Overview</h2>
+            <p className="text-xs text-gray-400 mt-1">{rangeSubtitle}</p>
+          </div>
+          {/* Range filter */}
+          <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 self-start">
+            {RANGE_OPTS.map((o) => (
+              <button
+                key={o.key}
+                onClick={() => setRange(o.key)}
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                  range === o.key ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
         </div>
         <BarChart data={monthlyData} />
       </div>
