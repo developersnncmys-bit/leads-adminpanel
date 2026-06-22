@@ -285,12 +285,22 @@ export default function EditBlogModal() {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">SEO Settings</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Meta Title</label>
-                    <input type="text" placeholder="SEO meta title" value={form.metaTitle} onChange={set('metaTitle')} className={inputCls()} />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-semibold text-gray-600">Meta Title</label>
+                      <span className={`text-[11px] font-medium ${form.metaTitle.length > 65 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {form.metaTitle.length}/65
+                      </span>
+                    </div>
+                    <input type="text" maxLength={65} placeholder="SEO meta title (max 65 chars)" value={form.metaTitle} onChange={set('metaTitle')} className={inputCls()} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Meta Description</label>
-                    <textarea placeholder="SEO meta description" value={form.metaDescription} onChange={set('metaDescription')} rows={2} className={`${inputCls()} resize-none`} />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-semibold text-gray-600">Meta Description</label>
+                      <span className={`text-[11px] font-medium ${form.metaDescription.length > 155 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {form.metaDescription.length}/155
+                      </span>
+                    </div>
+                    <textarea maxLength={155} placeholder="SEO meta description (max 155 chars)" value={form.metaDescription} onChange={set('metaDescription')} rows={2} className={`${inputCls()} resize-none`} />
                   </div>
                 </div>
               </div>
