@@ -112,15 +112,15 @@ export default function DashboardPage() {
   }));
 
   // Leads Overview chart range filter.
-  const thisYear = new Date().getFullYear();
-  const [range, setRange] = useState<'1m' | '3m' | '6m' | '1y'>('1y');
+  const [range, setRange] = useState<'1m' | '3m' | '6m' | '12m' | 'all'>('all');
   const [rangeOpen, setRangeOpen] = useState(false);
   const rangeRef = useRef<HTMLDivElement>(null);
   const RANGE_OPTS: { key: typeof range; label: string }[] = [
     { key: '1m', label: 'Last 30 Days' },
     { key: '3m', label: 'Last 3 Months' },
     { key: '6m', label: 'Last 6 Months' },
-    { key: '1y', label: `This Year (${thisYear})` },
+    { key: '12m', label: 'Last 12 Months' },
+    { key: 'all', label: 'All Time' },
   ];
   const rangeLabel = RANGE_OPTS.find((o) => o.key === range)?.label || '';
 
@@ -140,51 +140,58 @@ export default function DashboardPage() {
     if (range === '1m') {
       // Last 30 days, one bar per day.
       const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
-      const days: { label: string; from: number; to: number }[] = [];
-      for (let i = 0; i < 30; i++) {
+      return Array.from({ length: 30 }, (_, i) => {
         const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
         const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
-        days.push({ label: String(d.getDate()), from: d.getTime(), to: next.getTime() });
-      }
-      return days.map((b) => ({
-        label: b.label,
-        value: leads.filter((l) => {
-          const t = new Date(l.createdAt).getTime();
-          return t >= b.from && t < b.to;
-        }).length,
-      }));
+        return {
+          label: String(d.getDate()),
+          tip: `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+          value: leads.filter((l) => {
+            const t = new Date(l.createdAt).getTime();
+            return t >= d.getTime() && t < next.getTime();
+          }).length,
+        };
+      });
     }
-    if (range === '1y') {
-      // This calendar year, Jan–Dec.
-      return MONTHS.map((label, i) => ({
-        label,
-        value: leads.filter((l) => {
-          const d = new Date(l.createdAt);
-          return d.getFullYear() === now.getFullYear() && d.getMonth() === i;
-        }).length,
-      }));
+
+    // Monthly buckets. For "all", span from the earliest lead month to now
+    // (capped at 36 months) so historical/migrated data actually shows.
+    let monthsBack;
+    if (range === '3m') monthsBack = 3;
+    else if (range === '6m') monthsBack = 6;
+    else if (range === '12m') monthsBack = 12;
+    else {
+      const times = leads.map((l) => new Date(l.createdAt).getTime()).filter((t) => !isNaN(t));
+      const earliest = times.length ? new Date(Math.min(...times)) : now;
+      monthsBack =
+        (now.getFullYear() - earliest.getFullYear()) * 12 +
+        (now.getMonth() - earliest.getMonth()) + 1;
+      monthsBack = Math.min(Math.max(monthsBack, 1), 36);
     }
-    // Rolling monthly buckets for the last 3 / 6 months.
-    const months = range === '3m' ? 3 : 6;
-    const buckets: { label: string; y: number; m: number }[] = [];
-    for (let i = months - 1; i >= 0; i--) {
+
+    return Array.from({ length: monthsBack }, (_, idx) => {
+      const i = monthsBack - 1 - idx;
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      buckets.push({ label: MONTHS[d.getMonth()], y: d.getFullYear(), m: d.getMonth() });
-    }
-    return buckets.map((b) => ({
-      label: b.label,
-      value: leads.filter((l) => {
-        const d = new Date(l.createdAt);
-        return d.getFullYear() === b.y && d.getMonth() === b.m;
-      }).length,
-    }));
+      const y = d.getFullYear(), m = d.getMonth();
+      return {
+        // Show the year in the axis label only in January / multi-year spans,
+        // and always in the tooltip.
+        label: monthsBack > 12 ? `${MONTHS[m]} '${String(y).slice(2)}` : MONTHS[m],
+        tip: `${MONTHS[m]} ${y}`,
+        value: leads.filter((l) => {
+          const c = new Date(l.createdAt);
+          return c.getFullYear() === y && c.getMonth() === m;
+        }).length,
+      };
+    });
   }, [leads, range]);
 
   const rangeSubtitle =
     range === '1m' ? 'Daily lead activity — last 30 days'
     : range === '3m' ? 'Monthly lead activity — last 3 months'
     : range === '6m' ? 'Monthly lead activity — last 6 months'
-    : `Monthly lead activity — ${thisYear}`;
+    : range === '12m' ? 'Monthly lead activity — last 12 months'
+    : 'Monthly lead activity — all time';
 
   const [greeting, setGreeting] = useState('');
   useEffect(() => {

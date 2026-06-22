@@ -3,7 +3,9 @@
 import { useState } from 'react';
 
 interface BarChartProps {
-  data: { label: string; value: number }[];
+  // `tip` is the full label shown in the hover tooltip (e.g. "Feb 2025");
+  // `label` is the short axis label (e.g. "Feb"). Falls back to label.
+  data: { label: string; value: number; tip?: string }[];
 }
 
 // CSS-flex bar chart — each month gets equal width via flex-1 so labels stay
@@ -12,7 +14,6 @@ interface BarChartProps {
 // month labels look cramped/distorted on wider layouts.)
 export default function BarChart({ data }: BarChartProps) {
   const [hovered, setHovered] = useState<number | null>(null);
-  const year = new Date().getFullYear();
   const max = Math.max(...data.map((d) => d.value), 1);
 
   return (
@@ -30,12 +31,12 @@ export default function BarChart({ data }: BarChartProps) {
         </div>
 
         <div className="relative flex items-end gap-1 sm:gap-1.5 h-full">
-          {data.map(({ label, value }, i) => {
+          {data.map(({ label, value, tip }, i) => {
             const barH = (value / max) * 100;
             const isHovered = hovered === i;
             return (
               <div
-                key={label}
+                key={i}
                 className="relative flex-1 flex flex-col items-center justify-end h-full cursor-pointer"
                 onMouseEnter={() => setHovered(i)}
                 onMouseLeave={() => setHovered(null)}
@@ -44,7 +45,7 @@ export default function BarChart({ data }: BarChartProps) {
                 {isHovered && (
                   <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
                     <div className="bg-gray-900 rounded-xl px-3 py-2 shadow-xl text-center whitespace-nowrap">
-                      <p className="text-[10px] text-white/50 font-medium">{label} {year}</p>
+                      <p className="text-[10px] text-white/50 font-medium">{tip || label}</p>
                       <p className="text-sm font-bold text-white leading-tight">{value} leads</p>
                     </div>
                     <div
