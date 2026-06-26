@@ -97,23 +97,11 @@ export default function DashboardPage() {
     { label: 'Dead Leads', value: stats.dead, color: '#ef4444' },
   ];
 
-  // Track total + converted per service so we can show the conversion rate
-  // (converted / total) instead of just the share of total leads.
-  const serviceStats: Record<string, { count: number; converted: number }> = {};
-  leads.forEach((l) => {
-    if (!serviceStats[l.service]) serviceStats[l.service] = { count: 0, converted: 0 };
-    serviceStats[l.service].count++;
-    if (l.status === 'converted') serviceStats[l.service].converted++;
-  });
-  const categoryData = Object.entries(serviceStats).map(([name, s]) => ({
-    name,
-    count: s.count,
-    converted: s.converted,
-  }));
-
   // Leads Overview chart range filter.
   const thisYear = new Date().getFullYear();
-  const [range, setRange] = useState<'1m' | '3m' | '6m' | '12m' | 'year' | 'all'>('all');
+  const [range, setRange] = useState<'1m' | '3m' | '6m' | '12m' | 'year' | 'all' | 'custom'>('year');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   const [rangeOpen, setRangeOpen] = useState(false);
   const rangeRef = useRef<HTMLDivElement>(null);
   const RANGE_OPTS: { key: typeof range; label: string }[] = [
@@ -123,8 +111,32 @@ export default function DashboardPage() {
     { key: '12m', label: 'Last 12 Months' },
     { key: 'year', label: `This Year (${thisYear})` },
     { key: 'all', label: 'All Time' },
+    { key: 'custom', label: 'Custom Range' },
   ];
   const rangeLabel = RANGE_OPTS.find((o) => o.key === range)?.label || '';
+
+  // Category Distribution date filter (independent of the chart filter above).
+  const [catFrom, setCatFrom] = useState('');
+  const [catTo, setCatTo] = useState('');
+
+  // Conversion rate per service, optionally limited to a custom date range.
+  const categoryData = useMemo(() => {
+    const fromT = catFrom ? new Date(catFrom + 'T00:00:00').getTime() : -Infinity;
+    const toT = catTo ? new Date(catTo + 'T23:59:59').getTime() : Infinity;
+    const serviceStats: Record<string, { count: number; converted: number }> = {};
+    leads.forEach((l) => {
+      const t = new Date(l.createdAt).getTime();
+      if (t < fromT || t > toT) return;
+      if (!serviceStats[l.service]) serviceStats[l.service] = { count: 0, converted: 0 };
+      serviceStats[l.service].count++;
+      if (l.status === 'converted') serviceStats[l.service].converted++;
+    });
+    return Object.entries(serviceStats).map(([name, s]) => ({
+      name,
+      count: s.count,
+      converted: s.converted,
+    }));
+  }, [leads, catFrom, catTo]);
 
   // Close the range dropdown on outside click.
   useEffect(() => {
@@ -154,6 +166,46 @@ export default function DashboardPage() {
           }).length,
         };
       });
+    }
+
+    if (range === 'custom') {
+      // Between the two chosen dates. Daily bars for short spans, else monthly.
+      if (!customFrom || !customTo) return [];
+      const from = new Date(customFrom + 'T00:00:00');
+      const to = new Date(customTo + 'T23:59:59');
+      if (isNaN(from.getTime()) || isNaN(to.getTime()) || from > to) return [];
+      const dayMs = 86400000;
+      const spanDays = Math.round((to.getTime() - from.getTime()) / dayMs) + 1;
+      if (spanDays <= 62) {
+        return Array.from({ length: spanDays }, (_, i) => {
+          const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i);
+          const next = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+          return {
+            label: String(d.getDate()),
+            tip: `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`,
+            value: leads.filter((l) => {
+              const t = new Date(l.createdAt).getTime();
+              return t >= d.getTime() && t < next.getTime();
+            }).length,
+          };
+        });
+      }
+      // Monthly buckets across the custom span.
+      const buckets: { y: number; m: number }[] = [];
+      const cur = new Date(from.getFullYear(), from.getMonth(), 1);
+      const end = new Date(to.getFullYear(), to.getMonth(), 1);
+      while (cur <= end) {
+        buckets.push({ y: cur.getFullYear(), m: cur.getMonth() });
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      return buckets.map((b) => ({
+        label: `${MONTHS[b.m]} '${String(b.y).slice(2)}`,
+        tip: `${MONTHS[b.m]} ${b.y}`,
+        value: leads.filter((l) => {
+          const c = new Date(l.createdAt);
+          return c.getFullYear() === b.y && c.getMonth() === b.m;
+        }).length,
+      }));
     }
 
     if (range === 'year') {
@@ -198,10 +250,11 @@ export default function DashboardPage() {
         }).length,
       };
     });
-  }, [leads, range]);
+  }, [leads, range, customFrom, customTo]);
 
   const rangeSubtitle =
-    range === '1m' ? 'Daily lead activity — last 30 days'
+    range === 'custom' ? (customFrom && customTo ? `Lead activity — ${customFrom} to ${customTo}` : 'Pick a start and end date')
+    : range === '1m' ? 'Daily lead activity — last 30 days'
     : range === '3m' ? 'Monthly lead activity — last 3 months'
     : range === '6m' ? 'Monthly lead activity — last 6 months'
     : range === '12m' ? 'Monthly lead activity — last 12 months'
@@ -308,6 +361,33 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Custom date inputs — only when "Custom Range" is selected */}
+        {range === 'custom' && (
+          <div className="flex flex-wrap items-end gap-3 mb-5">
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">From</label>
+              <input
+                type="date"
+                value={customFrom}
+                max={customTo || undefined}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">To</label>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="text-sm border border-gray-200 rounded-xl px-3 py-2 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        )}
+
         <BarChart data={monthlyData} />
       </div>
 
@@ -316,12 +396,34 @@ export default function DashboardPage() {
 
         {/* CATEGORY DISTRIBUTION */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-5">
+          <div className="flex items-center gap-2 mb-4">
             <FileText className="w-5 h-5 text-blue-600" />
             <div>
               <h2 className="font-bold text-gray-900">Category Distribution</h2>
-              <p className="text-xs text-gray-400">Overall active leads by services</p>
+              <p className="text-xs text-gray-400">
+                {catFrom && catTo ? `Leads by service — ${catFrom} to ${catTo}` : 'Leads by service'}
+              </p>
             </div>
+          </div>
+
+          {/* Custom date filter for category distribution */}
+          <div className="flex flex-wrap items-end gap-2 mb-5">
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">From</label>
+              <input type="date" value={catFrom} max={catTo || undefined} onChange={(e) => setCatFrom(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-gray-500 mb-1">To</label>
+              <input type="date" value={catTo} min={catFrom || undefined} onChange={(e) => setCatTo(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            {(catFrom || catTo) && (
+              <button onClick={() => { setCatFrom(''); setCatTo(''); }}
+                className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-2.5 py-1.5 rounded-lg hover:bg-gray-100">
+                Clear
+              </button>
+            )}
           </div>
 
           <div className="space-y-5 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">

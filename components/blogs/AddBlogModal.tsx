@@ -282,11 +282,11 @@ export default function AddBlogModal() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="block text-xs font-semibold text-gray-600">Meta Title</label>
-                      <span className={`text-[11px] font-medium ${form.metaTitle.length > 65 ? 'text-red-500' : 'text-gray-400'}`}>
-                        {form.metaTitle.length}/65
+                      <span className={`text-[11px] font-medium ${form.metaTitle.length > 60 ? 'text-red-500' : 'text-gray-400'}`}>
+                        {form.metaTitle.length}/60
                       </span>
                     </div>
-                    <input type="text" maxLength={65} placeholder="SEO meta title (max 65 chars)" value={form.metaTitle} onChange={set('metaTitle')} className={inputCls()} />
+                    <input type="text" maxLength={60} placeholder="SEO meta title (max 60 chars)" value={form.metaTitle} onChange={set('metaTitle')} className={inputCls()} />
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
