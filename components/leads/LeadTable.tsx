@@ -24,7 +24,7 @@ export default function LeadTable({ leads }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { deleteLead, updateLead, refresh } = useAddLead();
+  const { deleteLead, updateLead } = useAddLead();
   // Only admins may (re)assign a lead. Employees see the assigned name as
   // read-only text — the dropdown is hidden for them.
   const auth = useAuthUser();
@@ -111,12 +111,15 @@ export default function LeadTable({ leads }: Props) {
     setSelected(new Set());
     setConfirmDeleteOpen(false);
     // Delete in small batches so a large selection doesn't fire hundreds of
-    // requests at once, then refresh the list to reconcile with the server.
+    // requests at once. Each deleteLead() removes the row optimistically and,
+    // on the rare failure, re-fetches — so the list reflects the deletion
+    // immediately. We deliberately do NOT re-fetch the whole list here: the
+    // server keeps a short-lived cache, and a re-fetch a split second after the
+    // delete can return the just-removed lead and make it "reappear".
     const BATCH = 10;
     for (let i = 0; i < ids.length; i += BATCH) {
       await Promise.all(ids.slice(i, i + BATCH).map((id) => deleteLead(id)));
     }
-    refresh();
   };
 
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
