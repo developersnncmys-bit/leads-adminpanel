@@ -24,7 +24,7 @@ export default function LeadTable({ leads }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { deleteLead, updateLead } = useAddLead();
+  const { deleteLead, updateLead, refresh } = useAddLead();
   // Only admins may (re)assign a lead. Employees see the assigned name as
   // read-only text — the dropdown is hidden for them.
   const auth = useAuthUser();
@@ -106,10 +106,17 @@ export default function LeadTable({ leads }: Props) {
     }
   };
   const deleteSelected = () => setConfirmDeleteOpen(true);
-  const confirmDeleteSelected = () => {
-    selected.forEach(id => deleteLead(id));
+  const confirmDeleteSelected = async () => {
+    const ids = [...selected];
     setSelected(new Set());
     setConfirmDeleteOpen(false);
+    // Delete in small batches so a large selection doesn't fire hundreds of
+    // requests at once, then refresh the list to reconcile with the server.
+    const BATCH = 10;
+    for (let i = 0; i < ids.length; i += BATCH) {
+      await Promise.all(ids.slice(i, i + BATCH).map((id) => deleteLead(id)));
+    }
+    refresh();
   };
 
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
