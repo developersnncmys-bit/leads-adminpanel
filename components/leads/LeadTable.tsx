@@ -24,7 +24,7 @@ export default function LeadTable({ leads }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { deleteLead, updateLead } = useAddLead();
+  const { deleteLead, updateLead, reloadStats } = useAddLead();
   // Only admins may (re)assign a lead. Employees see the assigned name as
   // read-only text — the dropdown is hidden for them.
   const auth = useAuthUser();
@@ -120,6 +120,9 @@ export default function LeadTable({ leads }: Props) {
     for (let i = 0; i < ids.length; i += BATCH) {
       await Promise.all(ids.slice(i, i + BATCH).map((id) => deleteLead(id)));
     }
+    // Update the sidebar/dashboard counts immediately (the rows are already
+    // gone via the optimistic removal above).
+    reloadStats();
   };
 
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];

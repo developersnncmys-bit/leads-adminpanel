@@ -19,6 +19,9 @@ interface AddLeadContextType {
   deleteLead: (id: string) => void;
   addNote: (id: string, text: string, author?: string) => void;
   refresh: () => void;
+  // Re-fetch the authoritative counts immediately (e.g. right after a delete)
+  // so the sidebar/dashboard numbers update without waiting for the 10s poll.
+  reloadStats: () => void;
 }
 
 const AddLeadContext = createContext<AddLeadContextType>({
@@ -33,6 +36,7 @@ const AddLeadContext = createContext<AddLeadContextType>({
   deleteLead: () => {},
   addNote: () => {},
   refresh: () => {},
+  reloadStats: () => {},
 });
 
 export function AddLeadProvider({ children }: { children: React.ReactNode }) {
@@ -181,6 +185,7 @@ export function AddLeadProvider({ children }: { children: React.ReactNode }) {
       deleteLead,
       addNote,
       refresh,
+      reloadStats: loadStats,
     }}>
       {children}
     </AddLeadContext.Provider>

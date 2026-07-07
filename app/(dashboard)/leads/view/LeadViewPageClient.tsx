@@ -286,7 +286,7 @@ function ConfirmModal({ message, onConfirm, onCancel }: { message: string; onCon
 function WebsiteLeadView({ leadId }: { leadId: string }) {
   const router = useRouter();
   const sp = useSearchParams();
-  const { leads, updateLead, deleteLead, addNote } = useAddLead();
+  const { leads, updateLead, deleteLead, addNote, reloadStats } = useAddLead();
   const auth = useAuthUser();
   const isAdmin = auth.role === 'admin';
   // Refund + delete are admin-only, PLUS the specific employee Ganesh (per request).
@@ -426,11 +426,13 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
       message: 'Are you sure you want to delete this lead? This cannot be undone.',
       action: async () => {
         setConfirm(null);
-        // Calling api.deleteLead directly (not the context method) so the
-        // optimistic remove doesn't trigger notFound() on this view
-        // mid-await. Once the backend confirms, we navigate — the
-        // destination's listLeads refetch then shows the lead truly gone.
-        try { await api.deleteLead(lead.id); } catch (err) { console.error('Failed to delete lead:', err); }
+        // Use the context delete so the lead is removed from the in-memory list
+        // immediately — the list page then shows it gone the moment we go back
+        // (no waiting for a poll). This view stays alive during the delete
+        // because it renders from `fullLead` state, not the context list, so
+        // removing it from context won't 404. Refresh the counts too.
+        try { await deleteLead(lead.id); } catch (err) { console.error('Failed to delete lead:', err); }
+        reloadStats();
         goBack();
       },
     });
