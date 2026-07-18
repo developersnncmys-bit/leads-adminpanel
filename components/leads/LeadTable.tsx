@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Search, Filter, Trash2, Download } from 'lucide-react';
+import { Search, Filter, Trash2, Download, CheckCircle } from 'lucide-react';
 import { Lead } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
 import * as api from '@/lib/api';
@@ -39,6 +39,7 @@ export default function LeadTable({ leads }: Props) {
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteSuccess, setDeleteSuccess] = useState<number | null>(null);
   // Pagination is mirrored to `?page=N` so a browser-back from a lead detail
   // page (or a manual refresh) lands the user on the same page they were on.
   const initialPage = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -121,8 +122,9 @@ export default function LeadTable({ leads }: Props) {
       await Promise.all(ids.slice(i, i + BATCH).map((id) => deleteLead(id)));
     }
     // Update the sidebar/dashboard counts immediately (the rows are already
-    // gone via the optimistic removal above).
+    // gone via the optimistic removal above), then show a success modal.
     reloadStats();
+    setDeleteSuccess(ids.length);
   };
 
   const assignedUsers = [...new Set(leads.map((l) => l.assignedTo))];
@@ -514,6 +516,28 @@ export default function LeadTable({ leads }: Props) {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success modal — shown after leads are deleted */}
+      {deleteSuccess !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteSuccess(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-50 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-base font-bold text-gray-900 mb-1">
+              {deleteSuccess} lead{deleteSuccess > 1 ? 's' : ''} deleted successfully
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">The list has been updated.</p>
+            <button
+              onClick={() => setDeleteSuccess(null)}
+              className="px-6 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
