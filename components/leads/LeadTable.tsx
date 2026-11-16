@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Search, Filter, Trash2, Download, CheckCircle } from 'lucide-react';
-import { Lead } from '@/lib/types';
+import { Search, Filter, Trash2, Download, CheckCircle, Calendar } from 'lucide-react';
+import { Lead, LeadStatus } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
 import * as api from '@/lib/api';
 import { SERVICES, VISA_COUNTRIES, isTouristVisa, visaCountryOf } from '@/lib/constants';
@@ -45,7 +45,13 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
   const [assignedFilter, setAssignedFilter] = useState<string>('all');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState<number | null>(null);
+  // Message for the success modal after a bulk delete / bulk status change.
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  // Bulk status change: confirm target, follow-up date picker, in-progress flag.
+  const [bulkStatus, setBulkStatus] = useState<{ status: LeadStatus; label: string } | null>(null);
+  const [bulkFollowUpOpen, setBulkFollowUpOpen] = useState(false);
+  const [bulkFollowUpDate, setBulkFollowUpDate] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
   // Pagination is mirrored to `?page=N` so a browser-back from a lead detail
   // page (or a manual refresh) lands the user on the same page they were on.
   const initialPage = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -131,10 +137,11 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
     // gone via the optimistic removal above), then show a success modal.
     reloadStats();
     if (serverStatus) setReloadKey((k) => k + 1);
-    setDeleteSuccess(ids.length);
+    setSuccessMsg(`${ids.length} lead${ids.length > 1 ? 's' : ''} deleted successfully`);
   };
 
   // ── Server-paged mode (serverStatus set) ──
+  // Declared before the bulk-action helpers below, which read serverRows.
   const [serverRows, setServerRows] = useState<Lead[]>([]);
   const [serverTotal, setServerTotal] = useState(0);
   const [serverAssignees, setServerAssignees] = useState<string[]>([]);
@@ -142,6 +149,56 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
   const [serverLoaded, setServerLoaded] = useState(false);
   const [serverError, setServerError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  // Status of a selected lead. In server mode a lead selected on another page
+  // isn't in serverRows, but every row of that tab has the tab's status.
+  const statusOf = (id: string): string =>
+    leads.find((l) => l.id === id)?.status ??
+    serverRows.find((l) => l.id === id)?.status ??
+    serverStatus ?? '';
+  const selectedStatuses = [...selected].map(statusOf);
+  // Same rules as the lead detail page's buttons, applied to every selected
+  // lead: converted = no changes; dead = only Converted; In Process hidden when
+  // already in process.
+  const anyClosed = selectedStatuses.some((s) => s === 'dead' || s === 'converted');
+  const showBulkFollowUp = !anyClosed;
+  const showBulkInProcess = !anyClosed && !selectedStatuses.includes('inprocess');
+  const showBulkConverted = !selectedStatuses.includes('converted');
+  const showBulkDead = !anyClosed;
+
+  // Apply the same update to every selected lead, in small batches.
+  const applyBulk = async (updates: (id: string) => Partial<Lead>, label: string) => {
+    const ids = [...selected];
+    setBulkBusy(true);
+    const BATCH = 10;
+    for (let i = 0; i < ids.length; i += BATCH) {
+      await Promise.all(ids.slice(i, i + BATCH).map((id) => updateLead(id, updates(id))));
+    }
+    setBulkBusy(false);
+    setSelected(new Set());
+    reloadStats();
+    if (serverStatus) setReloadKey((k) => k + 1);
+    setSuccessMsg(`${ids.length} lead${ids.length > 1 ? 's' : ''} moved to ${label}`);
+  };
+
+  const confirmBulkStatus = async () => {
+    if (!bulkStatus) return;
+    const { status, label } = bulkStatus;
+    setBulkStatus(null);
+    await applyBulk(() => ({ status }), label);
+  };
+
+  const submitBulkFollowUp = async () => {
+    const date = bulkFollowUpDate;
+    if (!date) return;
+    setBulkFollowUpOpen(false);
+    setBulkFollowUpDate('');
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    const status: LeadStatus = date < today ? 'overdue' : date === today ? 'today' : 'followup';
+    await applyBulk(() => ({ status, followUpDate: date }), 'Follow-up');
+  };
+
   const [exporting, setExporting] = useState(false);
   // Don't hit the server on every keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -412,15 +469,57 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
 
       {/* Bulk action bar — shown when rows are selected. Admin + Ganesh. */}
       {mayDelete && selected.size > 0 && (
-        <div className="flex items-center justify-between px-4 py-2.5 bg-blue-50 border-b border-blue-100">
-          <span className="text-sm font-semibold text-blue-700">{selected.size} lead{selected.size > 1 ? 's' : ''} selected</span>
-          <button
-            onClick={deleteSelected}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete Selected
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-blue-50 border-b border-blue-100">
+          <span className="text-sm font-semibold text-blue-700">
+            {selected.size} lead{selected.size > 1 ? 's' : ''} selected{bulkBusy ? ' · updating…' : ''}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Same status actions as the lead detail page, for all selected leads */}
+            {showBulkFollowUp && (
+              <button
+                onClick={() => setBulkFollowUpOpen(true)}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                <Calendar className="w-3.5 h-3.5" /> Follow Up
+              </button>
+            )}
+            {showBulkInProcess && (
+              <button
+                onClick={() => setBulkStatus({ status: 'inprocess', label: 'In Process' })}
+                disabled={bulkBusy}
+                className="px-3 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                In Process
+              </button>
+            )}
+            {showBulkConverted && (
+              <button
+                onClick={() => setBulkStatus({ status: 'converted', label: 'Converted' })}
+                disabled={bulkBusy}
+                className="px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                Converted
+              </button>
+            )}
+            {showBulkDead && (
+              <button
+                onClick={() => setBulkStatus({ status: 'dead', label: 'Dead' })}
+                disabled={bulkBusy}
+                className="px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-100 text-gray-600 hover:bg-gray-200 text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                Dead
+              </button>
+            )}
+            <button
+              onClick={deleteSelected}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Selected
+            </button>
+          </div>
         </div>
       )}
 
@@ -634,20 +733,83 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
         </div>
       )}
 
-      {/* Success modal — shown after leads are deleted */}
-      {deleteSuccess !== null && (
+      {/* Bulk status change — confirm */}
+      {bulkStatus && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteSuccess(null)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setBulkStatus(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 text-center">
+            <p className="text-sm font-medium text-gray-700 mb-6">
+              Are you sure you want to change {selected.size} lead{selected.size > 1 ? 's' : ''} to {bulkStatus.label}?
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={confirmBulkStatus}
+                className="px-6 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
+              >
+                OK
+              </button>
+              <button
+                onClick={() => setBulkStatus(null)}
+                className="px-6 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk follow-up — date picker */}
+      {bulkFollowUpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setBulkFollowUpOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-base font-bold text-gray-900">
+                Select Follow-up Date for {selected.size} lead{selected.size > 1 ? 's' : ''}
+              </h3>
+            </div>
+            <div className="p-5">
+              <input
+                type="date"
+                value={bulkFollowUpDate}
+                onChange={(e) => setBulkFollowUpDate(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+              />
+            </div>
+            <div className="flex justify-end gap-3 px-5 py-4 border-t border-gray-50">
+              <button
+                onClick={() => setBulkFollowUpOpen(false)}
+                className="px-5 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={submitBulkFollowUp}
+                disabled={!bulkFollowUpDate}
+                className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors disabled:opacity-50"
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success modal — shown after a bulk delete or bulk status change */}
+      {successMsg !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSuccessMsg(null)} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm z-10 p-6 text-center">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-50 flex items-center justify-center">
               <CheckCircle className="w-6 h-6 text-green-600" />
             </div>
             <h3 className="text-base font-bold text-gray-900 mb-1">
-              {deleteSuccess} lead{deleteSuccess > 1 ? 's' : ''} deleted successfully
+              {successMsg}
             </h3>
             <p className="text-sm text-gray-500 mb-6">The list has been updated.</p>
             <button
-              onClick={() => setDeleteSuccess(null)}
+              onClick={() => setSuccessMsg(null)}
               className="px-6 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
             >
               Done
