@@ -10,9 +10,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft, FileSearch, Upload, Trash2, Search, X, CheckCircle, XCircle,
+  ArrowLeft, FileSearch, Upload, Trash2, X, CheckCircle, XCircle,
   AlertTriangle, MinusCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp,
-  Plus, RotateCcw, Maximize2,
+  Plus, RotateCcw, Maximize2, Download, Phone, UserCheck, UserX,
 } from 'lucide-react';
 import type { Worker as TesseractWorker } from 'tesseract.js';
 import * as api from '@/lib/api';
@@ -23,6 +23,7 @@ import {
   type CompareField, type DocFields, type DocType, type FieldKey, type MatchResult, type MatchStatus,
 } from '@/lib/docCheck';
 import { readImage, type CanvasLike, type MakeCanvas } from '@/lib/docOcr';
+import { buildReportPdf } from '@/lib/docReport';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -302,7 +303,7 @@ function DocumentCheck() {
     setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, fields: { ...d.fields, [key]: value } } : d)));
   };
 
-  const pickLead = async (l: Lead) => {
+  const pickLead = useCallback(async (l: Lead) => {
     let full = l;
     try { full = await api.getLead(l.id); } catch { /* fall back to the search row */ }
     const fd = full.formData ?? {};
@@ -321,7 +322,7 @@ function DocumentCheck() {
       phone: full.mobileNumber || fd.mobile || '',
       address: [street, ...extra].filter(Boolean).join(', '),
     });
-  };
+  }, []);
 
   const counts = useMemo(() => {
     const c: Partial<Record<DocType, number>> = {};
@@ -454,7 +455,7 @@ function DocumentCheck() {
       </section>
 
       {/* 3. Results */}
-      {done.length > 0 && <Results docs={done} expected={expected} hasLead={Object.values(expected).some((v) => v.trim())} reading={reading} />}
+      {done.length > 0 && <Results docs={done} expected={expected} hasLead={Object.values(expected).some((v) => v.trim())} reading={reading} lead={lead} />}
 
       {viewing && <Viewer doc={viewing} onClose={() => setViewing(null)} />}
     </div>
@@ -477,66 +478,105 @@ function LeadDetails({
   const [q, setQ] = useState('');
   const [results, setResults] = useState<Lead[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searched, setSearched] = useState(''); // the term the current results are for
+
+  // A phone number is searched by its last 10 digits, so "+91 98450 12345" works.
+  const term = useMemo(() => {
+    const t = q.trim();
+    const digits = t.replace(/\D/g, '');
+    return digits.length >= 5 && /^[\d\s+()-]+$/.test(t) ? digits.slice(-10) : t;
+  }, [q]);
+  const isFullPhone = /^[6-9]\d{9}$/.test(term);
 
   useEffect(() => {
-    const term = q.trim();
-    if (term.length < 2) { setResults([]); return; }
+    if (term.length < 3) { setResults([]); setSearched(''); return; }
     setSearching(true);
     const t = setTimeout(async () => {
-      try { setResults(await api.searchLeads(term, 6)); } catch { setResults([]); }
+      let found: Lead[] = [];
+      try { found = await api.searchLeads(term, 8); } catch { found = []; }
+      setResults(found);
+      setSearched(term);
       setSearching(false);
-    }, 300);
+      // Exactly one lead with this phone number: select it straight away.
+      if (isFullPhone && found.length === 1) { onPick(found[0]); setQ(''); setResults([]); setSearched(''); }
+    }, 350);
     return () => clearTimeout(t);
-  }, [q]);
+  }, [term, isFullPhone, onPick]);
 
   const set = (k: CompareField) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setExpected((x) => ({ ...x, [k]: e.target.value }));
 
   const input = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400';
+  const noMatch = !searching && searched === term && term.length >= 3 && results.length === 0;
 
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-gray-900">1. Lead details <span className="font-normal text-gray-400">(optional)</span></p>
-          <p className="text-xs text-gray-400">Pick a lead or type the details. Leave empty to only compare the documents with each other.</p>
+          <p className="text-xs text-gray-400">
+            Enter the customer&apos;s phone number — if they are a lead, their details fill in and every document is matched against them.
+            Leave empty to only compare the documents with each other.
+          </p>
         </div>
         {(lead || Object.values(expected).some(Boolean)) && (
-          <button onClick={onClear} className="text-xs font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1">
+          <button onClick={onClear} className="text-xs font-semibold text-gray-500 hover:text-red-600 flex items-center gap-1 flex-shrink-0">
             <X className="w-3.5 h-3.5" /> Clear
           </button>
         )}
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search lead by name, phone or order ID…"
-          className={`${input} pl-9`}
-        />
-        {searching && <Loader2 className="w-4 h-4 text-gray-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2" />}
-        {results.length > 0 && (
-          <div className="absolute z-20 mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
-            {results.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => { onPick(l); setQ(''); setResults([]); }}
-                className="w-full text-left px-4 py-2.5 hover:bg-gray-50 border-b border-gray-50 last:border-0"
-              >
-                <p className="text-sm font-semibold text-gray-900">{l.name || 'Unnamed lead'}</p>
-                <p className="text-xs text-gray-400">{l.mobileNumber} · {l.service}</p>
-              </button>
-            ))}
+      {lead ? (
+        <div className="flex flex-wrap items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
+          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <UserCheck className="w-5 h-5 text-white" />
           </div>
-        )}
-      </div>
-
-      {lead && (
-        <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-          Loaded lead <b>{lead.name}</b> ({lead.service}) — you can still edit the values below.
-        </p>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900">{lead.name || 'Unnamed lead'}</p>
+            <p className="text-xs text-gray-500">
+              {lead.mobileNumber}{lead.service ? ` · ${lead.service}` : ''}{lead.orderId ? ` · ${lead.orderId}` : ''}{lead.status ? ` · ${lead.status}` : ''}
+            </p>
+            <p className="text-[11px] text-blue-700 mt-0.5">Lead found — documents are matched against these details. You can still edit them below.</p>
+          </div>
+          <button onClick={onClear} className="text-xs font-semibold text-blue-700 hover:text-blue-900 px-3 py-1.5 rounded-lg border border-blue-200 bg-white">
+            Change lead
+          </button>
+        </div>
+      ) : (
+        <div className="relative">
+          <Phone className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            inputMode="search"
+            placeholder="Customer phone number (or name / order ID)…"
+            className={`${input} pl-9 py-2.5`}
+          />
+          {searching && <Loader2 className="w-4 h-4 text-gray-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2" />}
+          {results.length > 0 && (
+            <div className="absolute z-20 mt-1 w-full bg-white border border-gray-100 rounded-xl shadow-lg overflow-hidden">
+              <p className="px-4 py-2 text-[11px] font-semibold text-gray-400 bg-gray-50">
+                {results.length} lead{results.length > 1 ? 's' : ''} found — pick one
+              </p>
+              {results.map((l) => (
+                <button
+                  key={l.id}
+                  onClick={() => { onPick(l); setQ(''); setResults([]); setSearched(''); }}
+                  className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-50 last:border-0"
+                >
+                  <p className="text-sm font-semibold text-gray-900">{l.name || 'Unnamed lead'}</p>
+                  <p className="text-xs text-gray-400">{l.mobileNumber} · {l.service}{l.date ? ` · ${l.date}` : ''}</p>
+                </button>
+              ))}
+            </div>
+          )}
+          {noMatch && (
+            <p className="flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mt-2">
+              <UserX className="w-3.5 h-3.5" />
+              No lead found for “{q.trim()}”. Type the customer&apos;s details below, or leave them empty.
+            </p>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -797,18 +837,18 @@ function displayValue(key: CompareField, v: string) {
   return key === 'dob' ? formatDob(parseDate(v) || v) : v;
 }
 
-function Results({ docs, expected, hasLead, reading }: { docs: DocItem[]; expected: Expected; hasLead: boolean; reading: boolean }) {
+// The whole comparison: column labels, one row per field, and percentages.
+// Shared by the on-screen table and the PDF report.
+function computeComparison(docs: DocItem[], expected: Expected) {
   // Column headings: "PAN Card", "Aadhaar Card (2)", custom names for "Other"…
-  const labels = useMemo(() => {
-    const seen: Record<string, number> = {};
-    const all = docs.map(docLabel);
-    return all.map((l) => {
-      seen[l] = (seen[l] || 0) + 1;
-      return all.filter((x) => x === l).length > 1 ? `${l} (${seen[l]})` : l;
-    });
-  }, [docs]);
+  const seen: Record<string, number> = {};
+  const all = docs.map(docLabel);
+  const labels = all.map((l) => {
+    seen[l] = (seen[l] || 0) + 1;
+    return all.filter((x) => x === l).length > 1 ? `${l} (${seen[l]})` : l;
+  });
 
-  const rows = useMemo(() => COMPARE_FIELDS.map(({ key, label, fn }) => {
+  const rows = COMPARE_FIELDS.map(({ key, label, fn }) => {
     // Reference value: the lead's details if entered, else the most trusted document.
     let refValue = expected[key].trim();
     let refDoc: string | null = null;
@@ -838,7 +878,7 @@ function Results({ docs, expected, hasLead, reading }: { docs: DocItem[]; expect
 
     const hasAny = !!expected[key].trim() || cells.some((c) => c.value);
     return { key, label, refValue, refLabel, cells, overall, hasAny };
-  }).filter((r) => r.hasAny), [docs, expected, labels]);
+  }).filter((r) => r.hasAny);
 
   const tally = rows.reduce(
     (a, r) => ({ ...a, [r.overall]: (a[r.overall] || 0) + 1 }),
@@ -864,6 +904,43 @@ function Results({ docs, expected, hasLead, reading }: { docs: DocItem[]; expect
   const perDoc = docs.map((_, i) => scoreOf(rows.map((r) => r.cells[i])));
   const perField = rows.map((r) => scoreOf(r.cells));
 
+  return { labels, rows, tally, verdict, verdictText, total, perDoc, perField };
+}
+
+type Comparison = ReturnType<typeof computeComparison>;
+
+// PDF report (built in lib/docReport.ts)
+async function downloadReport(cmp: Comparison, docs: DocItem[], expected: Expected, hasLead: boolean, lead: Lead | null) {
+  let generatedBy = '';
+  try { generatedBy = JSON.parse(localStorage.getItem('crm-auth') || '{}')?.name || ''; } catch { /* ignore */ }
+  const { pdf, fileName } = await buildReportPdf({
+    labels: cmp.labels,
+    fileNames: docs.map((d) => d.file.name),
+    rows: cmp.rows,
+    total: cmp.total,
+    perDoc: cmp.perDoc,
+    perField: cmp.perField,
+    verdictText: cmp.verdictText,
+    expected,
+    hasLead,
+    lead,
+    generatedBy,
+  });
+  pdf.save(fileName);
+}
+
+function Results({
+  docs, expected, hasLead, reading, lead,
+}: { docs: DocItem[]; expected: Expected; hasLead: boolean; reading: boolean; lead: Lead | null }) {
+  const cmp = useMemo(() => computeComparison(docs, expected), [docs, expected]);
+  const { labels, rows, tally, verdictText, total, perDoc, perField } = cmp;
+  const [exporting, setExporting] = useState(false);
+
+  const download = async () => {
+    setExporting(true);
+    try { await downloadReport(cmp, docs, expected, hasLead, lead); } finally { setExporting(false); }
+  };
+
   const th = 'px-4 py-3 text-[11px] font-bold uppercase tracking-wide text-gray-400';
 
   return (
@@ -878,12 +955,21 @@ function Results({ docs, expected, hasLead, reading }: { docs: DocItem[]; expect
               {reading && ' More documents are still being read…'}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(['match', 'partial', 'mismatch'] as const).map((s) => tally[s] ? (
               <span key={s} className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLE[s].cls}`}>
                 {tally[s]} field{tally[s]! > 1 ? 's' : ''} {s === 'match' ? 'matched' : s === 'partial' ? 'to check' : 'mismatched'}
               </span>
             ) : null)}
+            <button
+              onClick={download}
+              disabled={exporting || reading}
+              className="flex items-center gap-1.5 bg-gray-900 hover:bg-black disabled:opacity-50 text-white text-xs font-semibold px-3.5 py-2 rounded-xl"
+              title={reading ? 'Wait until all documents are read' : 'Download this match report as a PDF'}
+            >
+              {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              Download PDF
+            </button>
           </div>
         </div>
 

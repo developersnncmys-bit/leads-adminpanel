@@ -662,7 +662,10 @@ export function compareNames(a: string, b: string): MatchResult {
   A.forEach((t, i) => {
     if (t.length < 2) return;
     const j = B.findIndex((u, k) => !usedB.has(k) && u.length >= 2 &&
-      (u === t || (Math.min(t.length, u.length) >= 4 && similarity(t, u) >= 0.8)));
+      (u === t ||
+        (Math.min(t.length, u.length) >= 4 && similarity(t, u) >= 0.8) ||
+        // OCR cut the word short: "AJJA" for "AJJAHALLI"
+        (Math.min(t.length, u.length) >= 4 && (u.startsWith(t) || t.startsWith(u)))));
     if (j >= 0) { usedA.add(i); usedB.add(j); full++; }
   });
 
@@ -775,7 +778,7 @@ export const COMPARE_FIELDS: { key: CompareField; label: string; fn: (a: string,
 export const REFERENCE_PRIORITY: Record<CompareField, DocType[]> = {
   name:       ['passport', 'pan', 'aadhaar', 'birth_certificate', 'marks_10', 'driving_licence', 'voter_id', 'marks_12', 'other'],
   fatherName: ['passport', 'pan', 'marks_10', 'birth_certificate', 'driving_licence', 'voter_id', 'marks_12', 'aadhaar', 'other'],
-  motherName: ['birth_certificate', 'marks_10', 'passport', 'marks_12', 'other'],
+  motherName: ['birth_certificate', 'passport', 'marks_10', 'marks_12', 'other'],
   dob:        ['birth_certificate', 'passport', 'marks_10', 'pan', 'aadhaar', 'driving_licence', 'voter_id', 'marks_12', 'other'],
   gender:     ['passport', 'aadhaar', 'birth_certificate', 'voter_id', 'driving_licence', 'marks_10', 'marks_12', 'other'],
   address:    ['aadhaar', 'passport', 'driving_licence', 'voter_id', 'birth_certificate', 'other'],
