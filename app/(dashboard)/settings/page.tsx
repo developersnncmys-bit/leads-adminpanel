@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, BookOpen, ArrowRight, Briefcase } from 'lucide-react';
+import { Users, BookOpen, ArrowRight, Briefcase, FileSearch } from 'lucide-react';
 
 export default function SettingsHubPage() {
   return (
@@ -55,6 +55,20 @@ export default function SettingsHubPage() {
             <p className="text-xs text-gray-500 truncate">Open roles shown on the website</p>
           </div>
           <ArrowRight className="w-4 h-4 text-violet-600 flex-shrink-0" />
+        </Link>
+
+        <Link
+          href="/settings/document-check"
+          className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl p-5 hover:bg-emerald-100 transition-colors"
+        >
+          <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-200">
+            <FileSearch className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900">Document Check</p>
+            <p className="text-xs text-gray-500 truncate">Verify details across all customer documents</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-emerald-600 flex-shrink-0" />
         </Link>
       </div>
 
