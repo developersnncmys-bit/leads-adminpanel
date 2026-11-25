@@ -12,7 +12,7 @@ import { Search, Loader2, Download, ArrowLeft, ClipboardList, RefreshCw, Upload,
 import * as api from '@/lib/api';
 import type { OpsCase, CaseStatus } from '@/lib/types';
 import {
-  CASE_STATUS, OPS_SERVICES, SERVICE_TAB, statusInfo, rupees, thisMonth, monthLabel, pctTone,
+  CASE_STATUS, OPS_SERVICES, SERVICE_TAB, statusInfo, rupees, thisMonth, monthLabel, pctTone, isAutoCompleteCase,
 } from '@/lib/opsConfig';
 import OpsGate from '@/components/operations/OpsGate';
 import CaseEditor from '@/components/operations/CaseEditor';
@@ -285,13 +285,20 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                       <td className="px-3 py-3 text-xs text-gray-600">{r.city || '—'}<span className="block text-gray-400">{r.source}</span></td>
                       <td className="px-3 py-3 text-xs font-semibold text-gray-700">{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>
                       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={r.status}
-                          onChange={(e) => changeStatus(r, e.target.value as CaseStatus)}
-                          className={`text-xs font-semibold rounded-lg px-2 py-1.5 border-0 ${st.cls}`}
-                        >
-                          {CASE_STATUS.map((s) => <option key={s.key} value={s.key}>{s.short}</option>)}
-                        </select>
+                        {isAutoCompleteCase(r) ? (
+                          // PAN Card from a converted lead: completed automatically, not changeable.
+                          <span className={`inline-block text-xs font-semibold rounded-lg px-2.5 py-1.5 ${statusInfo('completed').cls}`} title="PAN Card: completed when the lead converted">
+                            {statusInfo('completed').short}
+                          </span>
+                        ) : (
+                          <select
+                            value={r.status}
+                            onChange={(e) => changeStatus(r, e.target.value as CaseStatus)}
+                            className={`text-xs font-semibold rounded-lg px-2 py-1.5 border-0 ${st.cls}`}
+                          >
+                            {CASE_STATUS.map((s) => <option key={s.key} value={s.key}>{s.short}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{fmtYmd(r.appointmentDate) || '—'}</td>
                       <td className="px-3 py-3 text-right whitespace-nowrap">

@@ -5,12 +5,13 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { X, Loader2, Eye, EyeOff, Trash2, ExternalLink, KeyRound } from 'lucide-react';
+import { X, Loader2, Eye, EyeOff, Trash2, ExternalLink, KeyRound, Lock, MessageSquare } from 'lucide-react';
 import * as api from '@/lib/api';
-import type { OpsCase } from '@/lib/types';
+import type { Lead, OpsCase } from '@/lib/types';
 import {
-  CASE_STATUS, CASE_SOURCES, OPS_SERVICES, PAYMENT_MODES, rupees, serviceFields,
+  CASE_STATUS, CASE_SOURCES, OPS_SERVICES, PAYMENT_MODES, rupees, serviceFields, isAutoCompleteCase, statusInfo,
 } from '@/lib/opsConfig';
+import { getSchema, resolveField } from '@/lib/formSchemas';
 
 type Form = Omit<OpsCase, 'id' | 'caseNo' | 'hasPortalPassword' | 'createdAt' | 'updatedAt' | 'completedAt'>;
 
@@ -43,6 +44,24 @@ export default function CaseEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fields = serviceFields(form.service);
+  // Cases from a converted lead: handled-by and service come from the lead and
+  // are locked; PAN Card cases are completed automatically and stay completed.
+  const fromLead = !!initial.leadId;
+  const autoDone = isAutoCompleteCase(initial);
+
+  // PAN Card: show the full lead (all form details + comments) inside the case.
+  const [lead, setLead] = useState<Lead | null>(null);
+  const [leadLoading, setLeadLoading] = useState(false);
+  useEffect(() => {
+    if (!autoDone || !initial.leadId) return;
+    let active = true;
+    setLeadLoading(true);
+    api.getLead(initial.leadId)
+      .then((l) => { if (active) setLead(l); })
+      .catch(() => {})
+      .finally(() => { if (active) setLeadLoading(false); });
+    return () => { active = false; };
+  }, [autoDone, initial.leadId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -70,6 +89,9 @@ export default function CaseEditor({
         amount: Number(form.amount) || 0,
         extraAmount: Number(form.extraAmount) || 0,
       };
+      // Never send the locked fields (the server ignores them too).
+      if (fromLead) { delete payload.handledBy; delete payload.service; }
+      if (autoDone) delete payload.status;
       if (newPassword.trim()) payload.portalPassword = newPassword.trim();
       const saved = await api.updateCase(initial.id, payload);
       onSaved(saved);
@@ -106,11 +128,17 @@ export default function CaseEditor({
         </div>
 
         <div className="px-5 py-4 space-y-5 max-h-[72vh] overflow-y-auto">
+          {autoDone && <LeadDetails lead={lead} loading={leadLoading} />}
+
           <Section title="Service">
             <Field label="Service">
-              <select className={input} value={form.service} onChange={(e) => set('service', e.target.value)}>
-                {OPS_SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {fromLead ? (
+                <LockedValue value={form.service} hint="From the lead" />
+              ) : (
+                <select className={input} value={form.service} onChange={(e) => set('service', e.target.value)}>
+                  {OPS_SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
             </Field>
             <Field label={fields.typeLabel}>
               <input className={input} list="case-types" value={form.appType} onChange={(e) => set('appType', e.target.value.toUpperCase())} placeholder="Pick or type" />
@@ -144,13 +172,23 @@ export default function CaseEditor({
 
           <Section title="Work">
             <Field label="Status">
-              <select className={input} value={form.status} onChange={(e) => set('status', e.target.value as Form['status'])}>
-                {CASE_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
+              {autoDone ? (
+                <LockedValue value={statusInfo('completed').label} hint="PAN Card: completed when converted" tone="text-emerald-700" />
+              ) : (
+                <select className={input} value={form.status} onChange={(e) => set('status', e.target.value as Form['status'])}>
+                  {CASE_STATUS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+                </select>
+              )}
             </Field>
             <Field label="Handled by">
-              <input className={input} list="case-team" value={form.handledBy} onChange={(e) => set('handledBy', e.target.value.toUpperCase())} placeholder="Team member" />
-              <datalist id="case-team">{team.map((t) => <option key={t} value={t} />)}</datalist>
+              {fromLead ? (
+                <LockedValue value={form.handledBy || 'Not assigned on the lead'} hint="Who the lead was assigned to when it converted" />
+              ) : (
+                <>
+                  <input className={input} list="case-team" value={form.handledBy} onChange={(e) => set('handledBy', e.target.value.toUpperCase())} placeholder="Team member" />
+                  <datalist id="case-team">{team.map((t) => <option key={t} value={t} />)}</datalist>
+                </>
+              )}
             </Field>
             <Field label="Source">
               <input className={input} list="case-sources" value={form.source} onChange={(e) => set('source', e.target.value.toUpperCase())} />
@@ -234,5 +272,65 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="block text-xs font-semibold text-gray-500 mb-1">{label}</span>
       {children}
     </label>
+  );
+}
+
+// A value that cannot be edited on this case, with why.
+function LockedValue({ value, hint, tone = 'text-gray-800' }: { value: string; hint: string; tone?: string }) {
+  return (
+    <div className="w-full px-3 py-2 text-sm border border-gray-100 rounded-xl bg-gray-50">
+      <p className={`font-semibold flex items-center gap-1.5 ${tone}`}><Lock className="w-3.5 h-3.5 text-gray-400" />{value}</p>
+      <p className="text-[11px] text-gray-400 mt-0.5">{hint}</p>
+    </div>
+  );
+}
+
+// PAN Card cases: every detail the customer gave on the lead, and its comments.
+function LeadDetails({ lead, loading }: { lead: Lead | null; loading: boolean }) {
+  if (loading) {
+    return <div className="flex items-center gap-2 text-sm text-gray-400 py-3"><Loader2 className="w-4 h-4 animate-spin" /> Loading lead details…</div>;
+  }
+  if (!lead) return null;
+
+  const seen = new Set<string>();
+  const items = getSchema(lead).flat()
+    .filter((f): f is NonNullable<typeof f> => !!f && !!f.key && !seen.has(f.key) && !!seen.add(f.key))
+    .map((f) => ({ label: f.label, value: resolveField(lead, f) }));
+  const notes = [...(lead.notes ?? [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2">Lead details</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 bg-blue-50/40 border border-blue-100 rounded-xl p-3">
+          {items.map((it) => (
+            <div key={it.label} className="min-w-0">
+              <p className="text-[11px] text-gray-400">{it.label}</p>
+              <p className="text-sm text-gray-900 break-words">{it.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-2 flex items-center gap-1.5">
+          <MessageSquare className="w-3.5 h-3.5" /> Comments ({notes.length})
+        </p>
+        {notes.length ? (
+          <div className="space-y-2">
+            {notes.map((n) => (
+              <div key={n.id || `${n.createdAt}-${n.text.slice(0, 20)}`} className="border border-gray-100 rounded-xl px-3 py-2">
+                <p className="text-sm text-gray-800 whitespace-pre-wrap">{n.text}</p>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  {n.author || 'Unknown'}
+                  {n.createdAt ? ` · ${new Date(n.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-400">No comments on this lead.</p>
+        )}
+      </div>
+    </div>
   );
 }

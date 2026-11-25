@@ -119,3 +119,9 @@ export const pctTone = (pct: number) =>
   pct >= 85 ? { bar: 'bg-emerald-500', text: 'text-emerald-600' }
   : pct >= 60 ? { bar: 'bg-amber-500', text: 'text-amber-600' }
   : { bar: 'bg-red-500', text: 'text-red-600' };
+
+// PAN Card needs no further operations work: a converted PAN lead's case is
+// completed automatically and its status cannot be changed (backend enforces it).
+export const AUTO_COMPLETE_SERVICES = ['PAN Card'];
+export const isAutoCompleteCase = (c: { leadId?: string; service: string }) =>
+  !!c.leadId && AUTO_COMPLETE_SERVICES.includes(c.service);
