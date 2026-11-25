@@ -70,7 +70,7 @@ export const DOC_TYPES: Record<DocType, DocTypeInfo> = {
     label: 'PAN Card',
     idLabel: 'PAN number',
     fields: ['name', 'fatherName', 'dob', 'idNumber'],
-    keywords: [[/INCOME\s*TAX/, 3], [/PERMANENT\s+ACCOUNT/, 3], [PAN_RE, 1]],
+    keywords: [[/INCOME\s*TAX/, 3], [/PERMANENT\s+ACCOUNT/, 3], [PAN_RE, 3]],
   },
   passport: {
     label: 'Passport',
@@ -82,7 +82,7 @@ export const DOC_TYPES: Record<DocType, DocTypeInfo> = {
     label: 'Driving Licence',
     idLabel: 'DL number',
     fields: ['name', 'fatherName', 'dob', 'gender', 'bloodGroup', 'address', 'idNumber', 'validTill'],
-    keywords: [[/DRIVING\s+LICEN[CS]E/, 4], [/\bDL\s*NO/, 2], [/LICEN[CS]E\s+NO/, 2], [/TRANSPORT/, 1], [/UNION\s+OF\s+INDIA/, 1], [/\b(LMV|MCWG|MCWOG|TRANS|COV)\b/, 1], [DL_RE, 2]],
+    keywords: [[/DRIVING\s+LICEN[CS]E/, 4], [/\bDL\s*NO/, 2], [/LICEN[CS]E\s+NO/, 2], [/TRANSPORT/, 1], [/UNION\s+OF\s+INDIA/, 1], [/\b(LMV|MCWG|MCWOG|TRANS|COV)\b/, 1], [DL_RE, 3]],
   },
   voter_id: {
     label: 'Voter ID',
@@ -158,7 +158,7 @@ function toLines(text: string): string[] {
 }
 
 // Words printed on documents that are never part of a person's name.
-const NOT_NAME = /\b(GOVT|GOVERNMENT|INDIA|INCOME|TAX|DEPARTMENT|PERMANENT|ACCOUNT|NUMBER|CARD|SIGNATURE|DOB|BIRTH|YEAR|MALE|FEMALE|TRANSGENDER|ADDRESS|FATHER|MOTHER|HUSBAND|NAME|UNIQUE|IDENTIFICATION|AUTHORITY|AADHAAR|AADHAR|REPUBLIC|PASSPORT|NATIONALITY|INDIAN|SURNAME|GIVEN|PLACE|ISSUE|EXPIRY|DATE|ENROLMENT|ENROLLMENT|VID|DOWNLOAD|HELP|WWW|GOV|MERA|PEHCHAN|PROOF|CITIZENSHIP|SPOUSE|LEGAL|GUARDIAN|FILE|TYPE|CODE|COUNTRY|SEX|ISSUED|LICENCE|LICENSE|DRIVING|TRANSPORT|UNION|VALID|VALIDITY|BLOOD|GROUP|ELECTION|COMMISSION|ELECTOR|IDENTITY|BOARD|SECONDARY|EXAMINATION|CERTIFICATE|SCHOOL|COLLEGE|MARKS|SUBJECT|SUBJECTS|TOTAL|RESULT|PASS|PASSED|REGISTER|REGISTRATION|ROLL|CLASS|DIVISION|DISTINCTION|GRADE|MUNICIPAL|CORPORATION|STATE|UNIVERSITY|EDUCATION|CANDIDATE|STATEMENT|LEAVING|MEDIUM|FIRST|SECOND|THIRD|ENGLISH|HINDI|KANNADA|SCIENCE|MATHEMATICS|SOCIAL|THE|THIS|THAT|HAS|HAVE|WITH|BELOW|MENTIONED|CERTIFY|CERTIFIED|FOLLOWING|DETAILS|INSTRUCTION|MONTH|OBTAINED|LANGUAGE|SINGATURE|HOLDER|NINETEEN|TWENTY|THOUSAND|HUNDRED|THIRTIETH|JANUARY|FEBRUARY|MARCH|APRIL|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\b/i;
+const NOT_NAME = /\b(GOVT|GOVERNMENT|INDIA|INCOME|TAX|DEPARTMENT|PERMANENT|ACCOUNT|NUMBER|CARD|SIGNATURE|DOB|BIRTH|YEAR|MALE|FEMALE|TRANSGENDER|ADDRESS|FATHER|MOTHER|HUSBAND|NAME|UNIQUE|IDENTIFICATION|AUTHORITY|AADHAAR|AADHAR|REPUBLIC|PASSPORT|NATIONALITY|INDIAN|SURNAME|GIVEN|PLACE|ISSUE|EXPIRY|DATE|ENROLMENT|ENROLLMENT|VID|DOWNLOAD|HELP|WWW|GOV|MERA|PEHCHAN|PROOF|CITIZENSHIP|SPOUSE|LEGAL|GUARDIAN|FILE|TYPE|CODE|COUNTRY|SEX|ISSUED|LICENCE|LICENSE|DRIVING|TRANSPORT|UNION|VALID|VALIDITY|BLOOD|GROUP|ELECTION|COMMISSION|ELECTOR|IDENTITY|BOARD|SECONDARY|EXAMINATION|CERTIFICATE|SCHOOL|COLLEGE|MARKS|SUBJECT|SUBJECTS|TOTAL|RESULT|PASS|PASSED|REGISTER|REGISTRATION|ROLL|CLASS|DIVISION|DISTINCTION|GRADE|MUNICIPAL|CORPORATION|STATE|UNIVERSITY|EDUCATION|CANDIDATE|STATEMENT|LEAVING|MEDIUM|FIRST|SECOND|THIRD|ENGLISH|HINDI|KANNADA|SCIENCE|MATHEMATICS|SOCIAL|THE|THIS|THAT|HAS|HAVE|WITH|BELOW|MENTIONED|CERTIFY|CERTIFIED|FOLLOWING|DETAILS|INSTRUCTION|MONTH|OBTAINED|LANGUAGE|SINGATURE|HOLDER|SEE|RULE|RULES|FORM|SECTION|ACT|NINETEEN|TWENTY|THOUSAND|HUNDRED|THIRTIETH|JANUARY|FEBRUARY|MARCH|APRIL|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\b/i;
 
 function isNameLike(line: string): boolean {
   const l = line.trim();
@@ -225,7 +225,7 @@ function nameCandidate(raw: string): string {
   // Common OCR slips inside names: "A 5" / "A $" for "A S", "SHANB0UGH",
   // and "A'S" for the initials "A S".
   const fixed = raw
-    .replace(/(^|\s)[$5](?=\s|$)/g, '$1S')
+    .replace(/(^|\s)[$5§](?=\s|$)/g, '$1S')
     .replace(/\S*[A-Za-z]{2}\S*/g, (w) => w.replace(/0/g, 'O').replace(/1/g, 'I').replace(/5/g, 'S').replace(/8/g, 'B'))
     .replace(/\b([A-Z])['’`]([A-Z])\b/g, '$1 $2');
   // The longest run of name characters is the name: "pe —. AJJAHALLI SUBRAMANYA"
@@ -784,3 +784,40 @@ export const REFERENCE_PRIORITY: Record<CompareField, DocType[]> = {
   address:    ['aadhaar', 'passport', 'driving_licence', 'voter_id', 'birth_certificate', 'other'],
   phone:      ['other', 'aadhaar'],
 };
+
+// ---------------------------------------------------------------------------
+// Combining several OCR readings of the same document
+// ---------------------------------------------------------------------------
+
+const NAME_FIELDS = new Set<FieldKey>(['name', 'fatherName', 'motherName']);
+
+// Pick the better of two values for one field. `a` comes from the stronger
+// reading and wins ties; `b` only replaces it when clearly more complete:
+// "Nithin Shanbough A" -> "Nithin Shanbough A S", a full date over a year,
+// an address that has its PIN code.
+function betterValue(key: FieldKey, a: string, b: string): string {
+  if (!a) return b;
+  if (!b || a === b) return a;
+  if (NAME_FIELDS.has(key)) {
+    const r = compareNames(a, b);
+    const ta = nameTokens(a).length, tb = nameTokens(b).length;
+    // Same name, one has 1–2 more parts (a dropped initial or surname) —
+    // more than that is usually OCR junk tacked on.
+    if ((r.status === 'match' || r.note?.startsWith('extra')) && tb > ta && tb - ta <= 2) return b;
+    return a;
+  }
+  if (key === 'dob') return a.length === 4 && b.length === 10 ? b : a;
+  if (key === 'address') return !pinFrom(a) && pinFrom(b) ? b : a;
+  return a;
+}
+
+// Fields from every reading, merged — each reading fills the other's gaps.
+export function extractMerged(texts: string[], type: DocType): DocFields {
+  const all = texts.filter((t) => t.trim()).map((t) => extractFields(t, type));
+  if (!all.length) return { ...EMPTY_FIELDS };
+  const out = { ...all[0] };
+  for (const f of all.slice(1)) {
+    for (const k of Object.keys(out) as FieldKey[]) out[k] = betterValue(k, out[k], f[k]);
+  }
+  return out;
+}

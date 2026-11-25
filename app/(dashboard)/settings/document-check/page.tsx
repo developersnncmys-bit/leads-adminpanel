@@ -12,14 +12,14 @@ import Link from 'next/link';
 import {
   ArrowLeft, FileSearch, Upload, Trash2, X, CheckCircle, XCircle,
   AlertTriangle, MinusCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp,
-  Plus, RotateCcw, Maximize2, Download, Phone, UserCheck, UserX,
+  Plus, RotateCcw, RotateCw, Crop, Maximize2, Download, Phone, UserCheck, UserX,
 } from 'lucide-react';
 import type { Worker as TesseractWorker } from 'tesseract.js';
 import * as api from '@/lib/api';
 import type { Lead } from '@/lib/types';
 import {
   COMPARE_FIELDS, DOC_TYPES, DOC_TYPE_ORDER, EMPTY_FIELDS, FIELD_LABEL, REFERENCE_PRIORITY,
-  detectDocType, extractFields, formatDob, parseDate,
+  detectDocType, extractMerged, formatDob, parseDate,
   type CompareField, type DocFields, type DocType, type FieldKey, type MatchResult, type MatchStatus,
 } from '@/lib/docCheck';
 import { readImage, type CanvasLike, type MakeCanvas } from '@/lib/docOcr';
@@ -38,7 +38,8 @@ interface DocItem {
   status: DocStatus;
   progress: number;       // 0..1 while reading
   stage: string;
-  text: string;
+  text: string;          // all readings, for "Show text read from document"
+  texts: string[];       // the separate OCR readings, best first
   type: DocType;
   forcedType: DocType | null; // chosen by the admin before reading — skips detection
   customLabel: string;    // name for "Other" documents, e.g. "Bank passbook"
@@ -65,7 +66,7 @@ const makeCanvas: MakeCanvas = (w, h) => {
   return c;
 };
 
-interface PdfSource { text: string; pages: HTMLCanvasElement[] }
+interface PdfSource { text: string; pages: HTMLCanvasElement[]; preview?: HTMLCanvasElement }
 
 // Digital PDFs (e.g. e-Aadhaar, DigiLocker marks cards) carry a text layer that
 // is far more accurate than OCR, so use it when present; scanned PDFs are
@@ -104,19 +105,21 @@ async function readPdf(file: File, askPassword: (retry: boolean) => string | nul
     }
     text += '\n';
   }
-  if (text.replace(/\s/g, '').length >= 80) return { text, pages: [] };
-
-  const pages: HTMLCanvasElement[] = [];
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await doc.getPage(i);
-    const viewport = page.getViewport({ scale: 2.5 });
+  const render = async (n: number, scale: number) => {
+    const page = await doc.getPage(n);
+    const viewport = page.getViewport({ scale });
     const canvas = document.createElement('canvas');
     canvas.width = Math.ceil(viewport.width);
     canvas.height = Math.ceil(viewport.height);
     await page.render({ canvas, viewport }).promise;
-    pages.push(canvas);
-  }
-  return { text: '', pages };
+    return canvas;
+  };
+
+  if (text.replace(/\s/g, '').length >= 80) return { text, pages: [], preview: await render(1, 2.5) };
+
+  const pages: HTMLCanvasElement[] = [];
+  for (let i = 1; i <= pageCount; i++) pages.push(await render(i, 2.5));
+  return { text: '', pages, preview: pages[0] };
 }
 
 // ---------------------------------------------------------------------------
@@ -209,9 +212,9 @@ function DocumentCheck() {
     currentId.current = doc.id;
     patchDoc(doc.id, { status: 'reading', progress: 0, stage: 'Preparing' });
     try {
-      let text = '';
-      // Reads one image, retrying with background clean-up and rotation when
-      // the first pass can't make sense of it (sideways scans, PAN holograms).
+      let texts: string[] = [];
+      // Reads one image twice (as-is and background-cleaned), rotating
+      // sideways scans; returns the readings best first.
       const ocr = (img: CanvasLike) =>
         readImage(img, {
           make: makeCanvas,
@@ -227,16 +230,27 @@ function DocumentCheck() {
             'e-Aadhaar password = first 4 letters of the name in CAPITALS + birth year (e.g. RAVI1990).',
           ),
         );
-        text = pdf.text;
-        for (const page of pdf.pages) text += (await ocr(page)) + '\n';
+        // A picture of page 1 so the PDF can be viewed, cropped and rotated too.
+        if (!doc.previewUrl && pdf.preview) {
+          const blob = await new Promise<Blob | null>((res) => pdf.preview!.toBlob(res, 'image/jpeg', 0.85));
+          if (blob) patchDoc(doc.id, { previewUrl: URL.createObjectURL(blob) });
+        }
+        if (pdf.text) texts = [pdf.text];
+        else {
+          // Scanned PDF: read every page; reading 1 of all pages, then reading 2.
+          const perPage: string[][] = [];
+          for (const page of pdf.pages) perPage.push(await ocr(page));
+          texts = [0, 1].map((i) => perPage.map((r) => r[i] ?? r[0] ?? '').join('\n')).filter((t) => t.trim());
+        }
       } else {
         // Honour the phone's EXIF rotation, then read.
         const bmp = await createImageBitmap(doc.file, { imageOrientation: 'from-image' });
-        try { text = await ocr(bmp as unknown as CanvasLike); } finally { bmp.close(); }
+        try { texts = await ocr(bmp as unknown as CanvasLike); } finally { bmp.close(); }
       }
 
-      const type = doc.forcedType ?? detectDocType(text);
-      patchDoc(doc.id, { status: 'done', progress: 1, stage: '', text, type, fields: extractFields(text, type) });
+      const all = texts.join('\n');
+      const type = doc.forcedType ?? detectDocType(all);
+      patchDoc(doc.id, { status: 'done', progress: 1, stage: '', texts, text: all, type, fields: extractMerged(texts, type) });
     } catch (e) {
       patchDoc(doc.id, { status: 'error', error: e instanceof Error ? e.message : 'Could not read this file' });
     } finally {
@@ -268,6 +282,7 @@ function DocumentCheck() {
         progress: 0,
         stage: 'Waiting',
         text: '',
+        texts: [],
         type: forcedType ?? 'other',
         forcedType,
         customLabel: '',
@@ -292,11 +307,25 @@ function DocumentCheck() {
   };
 
   const changeType = (id: string, type: DocType) => {
-    setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, type, forcedType: type, fields: extractFields(d.text, type) } : d)));
+    setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, type, forcedType: type, fields: extractMerged(d.texts, type) } : d)));
   };
 
   const rereadFields = (id: string) => {
-    setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, fields: extractFields(d.text, d.type) } : d)));
+    setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, fields: extractMerged(d.texts, d.type) } : d)));
+  };
+
+  // From the viewer's crop / rotate tool: swap in the edited image and read it again.
+  const replaceImage = (id: string, file: File) => {
+    setDocs((ds) => ds.map((d) => {
+      if (d.id !== id) return d;
+      if (d.previewUrl) URL.revokeObjectURL(d.previewUrl);
+      return {
+        ...d, file, previewUrl: URL.createObjectURL(file), status: 'queued', progress: 0, stage: 'Waiting',
+        text: '', texts: [], fields: { ...EMPTY_FIELDS }, error: '',
+        forcedType: d.status === 'done' ? d.type : d.forcedType, // keep the type the admin saw
+      };
+    }));
+    setViewing(null);
   };
 
   const editField = (id: string, key: FieldKey, value: string) => {
@@ -457,7 +486,7 @@ function DocumentCheck() {
       {/* 3. Results */}
       {done.length > 0 && <Results docs={done} expected={expected} hasLead={Object.values(expected).some((v) => v.trim())} reading={reading} lead={lead} />}
 
-      {viewing && <Viewer doc={viewing} onClose={() => setViewing(null)} />}
+      {viewing && <Viewer doc={viewing} onClose={() => setViewing(null)} onApply={(file) => replaceImage(viewing.id, file)} />}
     </div>
   );
 }
@@ -756,9 +785,16 @@ function DocCard({
               {showText ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               {showText ? 'Hide' : 'Show'} text read from document
             </button>
-            <button onClick={onReread} className="text-xs font-semibold text-gray-500 hover:text-blue-700 flex items-center gap-1" title="Discard manual edits and fill the fields again from the text">
-              <RotateCcw className="w-3.5 h-3.5" /> Reset fields
-            </button>
+            <div className="flex items-center gap-3">
+              {doc.previewUrl && (
+                <button onClick={onView} className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1" title="Select just the document, rotate it, and read it again">
+                  <Crop className="w-3.5 h-3.5" /> Crop / rotate
+                </button>
+              )}
+              <button onClick={onReread} className="text-xs font-semibold text-gray-500 hover:text-blue-700 flex items-center gap-1" title="Discard manual edits and fill the fields again from the text">
+                <RotateCcw className="w-3.5 h-3.5" /> Reset fields
+              </button>
+            </div>
           </div>
           {showText && (
             <pre className="text-[11px] text-gray-600 bg-gray-50 rounded-lg p-3 max-h-56 overflow-auto whitespace-pre-wrap">
@@ -776,20 +812,129 @@ function maskAadhaar(text: string): string {
   return text.replace(/\b\d{4}(\s?)\d{4}(\s?)(\d{4})\b/g, 'XXXX$1XXXX$2$3');
 }
 
-function Viewer({ doc, onClose }: { doc: DocItem; onClose: () => void }) {
+const loadImage = (url: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+
+const canvasToFile = (c: HTMLCanvasElement, name: string) =>
+  new Promise<File>((resolve, reject) =>
+    c.toBlob((b) => (b ? resolve(new File([b], name, { type: 'image/png' })) : reject(new Error('Could not save image'))), 'image/png'));
+
+// Full-size view of a document with a crop & rotate tool: drag a box around
+// just the card (cutting out the table, fingers, other papers), rotate it
+// upright, and read it again — the fix for photos the OCR can't make sense of.
+function Viewer({ doc, onClose, onApply }: { doc: DocItem; onClose: () => void; onApply: (file: File) => void }) {
+  const [src, setSrc] = useState(doc.previewUrl);
+  const [sel, setSel] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const dragging = useRef(false);
+  const made = useRef<string[]>([]); // object URLs this viewer created
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+  useEffect(() => () => made.current.forEach((u) => URL.revokeObjectURL(u)), []);
+
+  const point = (e: React.PointerEvent) => {
+    const r = imgRef.current!.getBoundingClientRect();
+    return { x: Math.min(Math.max(e.clientX - r.left, 0), r.width), y: Math.min(Math.max(e.clientY - r.top, 0), r.height) };
+  };
+  const box = sel && {
+    left: Math.min(sel.x0, sel.x1), top: Math.min(sel.y0, sel.y1),
+    width: Math.abs(sel.x1 - sel.x0), height: Math.abs(sel.y1 - sel.y0),
+  };
+  const hasBox = !!box && box.width > 12 && box.height > 12;
+
+  const rotateBy = async (deg: 90 | -90) => {
+    setBusy(true);
+    try {
+      const img = await loadImage(src);
+      const c = document.createElement('canvas');
+      c.width = img.naturalHeight;
+      c.height = img.naturalWidth;
+      const ctx = c.getContext('2d')!;
+      ctx.translate(c.width / 2, c.height / 2);
+      ctx.rotate((deg * Math.PI) / 180);
+      ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+      const url = URL.createObjectURL(await canvasToFile(c, 'rotated.png'));
+      made.current.push(url);
+      setSrc(url);
+      setSel(null);
+    } finally { setBusy(false); }
+  };
+
+  const apply = async () => {
+    setBusy(true);
+    try {
+      const img = await loadImage(src);
+      const shown = imgRef.current!.getBoundingClientRect();
+      const sx = img.naturalWidth / shown.width, sy = img.naturalHeight / shown.height;
+      const r = hasBox
+        ? { x: box!.left * sx, y: box!.top * sy, w: box!.width * sx, h: box!.height * sy }
+        : { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight };
+      const c = document.createElement('canvas');
+      c.width = Math.round(r.w);
+      c.height = Math.round(r.h);
+      c.getContext('2d')!.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+      const base = doc.file.name.replace(/\.[^.]+$/, '');
+      onApply(await canvasToFile(c, `${base}-edited.png`));
+    } finally { setBusy(false); }
+  };
+
+  const btn = 'flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white disabled:opacity-40';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
-      <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white" title="Close">
-        <X className="w-5 h-5" />
-      </button>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={doc.previewUrl} alt={doc.file.name} className="max-w-full max-h-full object-contain rounded-lg" onClick={(e) => e.stopPropagation()} />
+    <div className="fixed inset-0 z-50 bg-black/85 flex flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <p className="text-xs text-white/70">
+          Drag a box around just the document, rotate it upright if needed, then <b className="text-white">Read again</b>.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button className={btn} disabled={busy} onClick={() => rotateBy(-90)} title="Rotate left">
+            <RotateCcw className="w-4 h-4" /> Rotate left
+          </button>
+          <button className={btn} disabled={busy} onClick={() => rotateBy(90)} title="Rotate right">
+            <RotateCw className="w-4 h-4" /> Rotate right
+          </button>
+          {sel && <button className={btn} disabled={busy} onClick={() => setSel(null)}><X className="w-4 h-4" /> Clear box</button>}
+          <button
+            className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40"
+            disabled={busy || (!hasBox && src === doc.previewUrl)}
+            onClick={apply}
+            title={hasBox ? 'Read only the selected part' : 'Read the rotated image'}
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crop className="w-4 h-4" />}
+            Read again{hasBox ? ' (selected part)' : ''}
+          </button>
+          <button onClick={onClose} className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white" title="Close">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 min-h-0 flex items-center justify-center p-4 pt-0">
+        <div
+          className="relative select-none touch-none cursor-crosshair"
+          onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); dragging.current = true; const p = point(e); setSel({ x0: p.x, y0: p.y, x1: p.x, y1: p.y }); }}
+          onPointerMove={(e) => { if (!dragging.current) return; const p = point(e); setSel((s) => (s ? { ...s, x1: p.x, y1: p.y } : s)); }}
+          onPointerUp={() => { dragging.current = false; }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img ref={imgRef} src={src} alt={doc.file.name} draggable={false} className="block max-w-[92vw] max-h-[78vh] object-contain rounded-lg" />
+          {box && (
+            <div
+              className="absolute border-2 border-blue-400 bg-blue-400/10 pointer-events-none"
+              style={{ left: box.left, top: box.top, width: box.width, height: box.height, boxShadow: '0 0 0 9999px rgba(0,0,0,0.45)' }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

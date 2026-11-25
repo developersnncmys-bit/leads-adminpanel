@@ -24,9 +24,15 @@ export type Recognize = (canvas: CanvasLike, psm: '3' | '11') => Promise<{ text:
 export function normalize(src: CanvasLike | { width: number; height: number }, make: MakeCanvas): CanvasLike {
   const long = Math.max(src.width, src.height);
   const scale = Math.min(3, 2000 / long);
-  const out = make(Math.round(src.width * scale), Math.round(src.height * scale));
+  const w = Math.round(src.width * scale), h = Math.round(src.height * scale);
+  // White margin around the image: Tesseract misreads text that touches the
+  // edge, which is exactly what tightly cropped card photos do.
+  const pad = Math.round(Math.max(w, h) * 0.05);
+  const out = make(w + 2 * pad, h + 2 * pad);
   const ctx = out.getContext('2d');
-  ctx.drawImage(src, 0, 0, out.width, out.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(src, pad, pad, w, h);
   const img = ctx.getImageData(0, 0, out.width, out.height);
   const p = img.data;
   for (let k = 0; k < p.length; k += 4) {
@@ -95,31 +101,46 @@ export function assessReading(text: string, confidence: number, forcedType: DocT
   };
 }
 
-const ATTEMPTS: { deg: number; clean: boolean; psm: '3' | '11'; label: string }[] = [
-  { deg: 0,   clean: false, psm: '3',  label: 'Reading text' },
-  { deg: 0,   clean: true,  psm: '11', label: 'Cleaning background' },
-  { deg: 90,  clean: true,  psm: '11', label: 'Trying rotated 90°' },
-  { deg: 270, clean: true,  psm: '11', label: 'Trying rotated 270°' },
-  { deg: 180, clean: true,  psm: '11', label: 'Trying upside down' },
-];
+type Reading = { text: string; score: number; good: boolean };
 
+// Reads the image twice — as-is (normal layout) and background-cleaned
+// (sparse text) — because each catches what the other misses. Sideways scans
+// are found by trying the cleaned reading at 90°, 270° and 180°; the right
+// orientation then gets its second reading too. Returns the readings, best
+// first; the caller combines their fields (see extractMerged).
 export async function readImage(
   source: CanvasLike | { width: number; height: number },
   opts: { make: MakeCanvas; recognize: Recognize; forcedType?: DocType | null; onStep?: (label: string, step: number, total: number) => void },
-): Promise<string> {
+): Promise<string[]> {
   const base = normalize(source, opts.make);
   let cleaned: CanvasLike | null = null;
-  let best = { score: -1, text: '' };
+  const forced = opts.forcedType ?? null;
+  let step = 0;
+  const TOTAL = 6;
 
-  for (let i = 0; i < ATTEMPTS.length; i++) {
-    const a = ATTEMPTS[i];
-    opts.onStep?.(a.label, i + 1, ATTEMPTS.length);
-    if (a.clean && !cleaned) cleaned = cleanBackground(base, opts.make);
-    const img = rotate(a.clean ? cleaned! : base, a.deg, opts.make);
-    const { text, confidence } = await opts.recognize(img, a.psm);
-    const r = assessReading(text, confidence, opts.forcedType ?? null);
-    if (r.score > best.score) best = { score: r.score, text };
-    if (r.good) return text;
+  const read = async (deg: number, clean: boolean, label: string): Promise<Reading> => {
+    opts.onStep?.(label, ++step, TOTAL);
+    if (clean && !cleaned) cleaned = cleanBackground(base, opts.make);
+    const img = rotate(clean ? cleaned! : base, deg, opts.make);
+    const { text, confidence } = await opts.recognize(img, clean ? '11' : '3');
+    return { text, ...assessReading(text, confidence, forced) };
+  };
+  const ranked = (rs: Reading[]) => [...rs].sort((a, b) => b.score - a.score).map((r) => r.text);
+
+  // Upright: both readings.
+  const plain0 = await read(0, false, 'Reading text');
+  const clean0 = await read(0, true, 'Second reading (background cleaned)');
+  if (plain0.good || clean0.good) return ranked([plain0, clean0]);
+
+  // Sideways or upside down: find the orientation, then read it both ways.
+  const all: Reading[] = [plain0, clean0];
+  for (const [deg, label] of [[90, 'Trying rotated 90°'], [270, 'Trying rotated 270°'], [180, 'Trying upside down']] as const) {
+    const r = await read(deg, true, label);
+    all.push(r);
+    if (r.good) {
+      const plain = await read(deg, false, 'Second reading');
+      return ranked([r, plain]);
+    }
   }
-  return best.text;
+  return ranked(all).slice(0, 2);
 }
