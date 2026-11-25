@@ -82,10 +82,10 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Team names for "Handled by": operations users + admins.
+  // Team names for "Handled by": all active team members.
   useEffect(() => {
     api.listUsers()
-      .then((us) => setTeam(us.filter((u) => u.role === 'operations' || u.role === 'admin').map((u) => u.name.toUpperCase())))
+      .then((us) => setTeam(us.filter((u) => u.status !== 'inactive').map((u) => u.name.toUpperCase())))
       .catch(() => setTeam([]));
   }, []);
   const teamOptions = useMemo(

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
-  Settings, Zap, Briefcase, ClipboardList,
+  Settings, Zap, Briefcase, ClipboardList, FileSearch,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { canUseOperations } from '@/lib/opsConfig';
@@ -52,36 +52,34 @@ export default function Sidebar() {
       {/* Nav */}
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
 
-        {user.role !== 'operations' && (
-          <>
-            <NavItem href="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/') && pathname === '/'} />
-            <button
-              onClick={openModal}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all"
-            >
-              <PlusCircle className="w-4 h-4 text-gray-400" />
-              Add Lead
-            </button>
+        <NavItem href="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/') && pathname === '/'} />
+        <button
+          onClick={openModal}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all"
+        >
+          <PlusCircle className="w-4 h-4 text-gray-400" />
+          Add Lead
+        </button>
 
-            <SectionLabel>Pipeline</SectionLabel>
-            {LEAD_NAV.map(({ href, label, icon, dot }) => (
-              <NavItem
-                key={href}
-                href={href}
-                icon={icon}
-                label={label}
-                active={isActive(href)}
-                dot={dot}
-              />
-            ))}
-          </>
-        )}
+        <SectionLabel>Pipeline</SectionLabel>
+        {LEAD_NAV.map(({ href, label, icon, dot }) => (
+          <NavItem
+            key={href}
+            href={href}
+            icon={icon}
+            label={label}
+            active={isActive(href)}
+            dot={dot}
+          />
+        ))}
 
+        {/* Operations (admins only), below the leads pipeline */}
         {canUseOperations(user.role) && (
           <>
             <SectionLabel>Operations</SectionLabel>
             <NavItem href="/operations" icon={Briefcase} label="Overview" active={isActive('/operations')} />
             <NavItem href="/operations/cases" icon={ClipboardList} label="Cases" active={isActive('/operations/cases')} />
+            <NavItem href="/operations/document-check" icon={FileSearch} label="Document Check" active={isActive('/operations/document-check')} />
           </>
         )}
 

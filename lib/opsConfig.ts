@@ -17,8 +17,8 @@ export const CASE_STATUS: { key: CaseStatus; label: string; short: string; cls: 
 
 export const statusInfo = (s: string) => CASE_STATUS.find((x) => x.key === s) ?? CASE_STATUS[0];
 
-// Who can open the Operations module.
-export const canUseOperations = (role?: UserRole | string) => role === 'admin' || role === 'operations';
+// Who can open the Operations module (Overview, Cases, Document Check): admins only.
+export const canUseOperations = (role?: UserRole | string) => role === 'admin';
 
 export const OPS_SERVICES = [...SERVICES, 'Complaint Copy', 'Other'];
 

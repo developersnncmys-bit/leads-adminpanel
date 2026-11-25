@@ -540,8 +540,8 @@ export default function TeamSettingsPage() {
 
                 <div className="col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Role</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {(['employee', 'operations', 'admin'] as UserRole[]).map((r) => (
+                  <div className="grid grid-cols-2 gap-3">
+                    {(['employee', 'admin'] as UserRole[]).map((r) => (
                       <button
                         key={r}
                         type="button"

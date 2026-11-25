@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { canUseOperations } from '@/lib/opsConfig';
 
-// Renders the Operations pages only for admins and the Operations role.
+// Renders the Operations pages (Overview, Cases, Document Check) only for admins.
 export default function OpsGate({ children }: { children: (role: string) => React.ReactNode }) {
   const [role, setRole] = useState<string | null>(null);
   useEffect(() => {
@@ -18,8 +18,8 @@ export default function OpsGate({ children }: { children: (role: string) => Reac
     return (
       <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
         <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-        <p className="text-sm font-bold text-gray-900">Operations team only</p>
-        <p className="text-sm text-gray-400 mt-1">Ask an admin to give your account the Operations role in Team Settings.</p>
+        <p className="text-sm font-bold text-gray-900">Admins only</p>
+        <p className="text-sm text-gray-400 mt-1">Operations is available to admin accounts.</p>
       </div>
     );
   }

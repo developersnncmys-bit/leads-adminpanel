@@ -3,7 +3,7 @@
 // Birth Certificate, anything else) and compare them with each other / a lead.
 //
 // Everything here is pure string logic — OCR itself runs in the browser (see
-// app/(dashboard)/settings/document-check), so documents never leave the
+// app/(dashboard)/operations/document-check), so documents never leave the
 // admin's machine.
 //
 // To support a new document type: add it to DOC_TYPES (label, fields,

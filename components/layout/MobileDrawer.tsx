@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
-  UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap, Briefcase, ClipboardList,
+  UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap, Briefcase, ClipboardList, FileSearch,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
 import { canUseOperations } from '@/lib/opsConfig';
@@ -76,20 +76,17 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          {user.role !== 'operations' && (
-            <>
-              <NavLink href="/" label="Dashboard" icon={LayoutDashboard} />
-              <NavLink href="/leads/add" label="Add Lead" icon={PlusCircle} />
+          <NavLink href="/" label="Dashboard" icon={LayoutDashboard} />
+          <NavLink href="/leads/add" label="Add Lead" icon={PlusCircle} />
 
-              <div className="pt-4 pb-1.5 px-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Pipeline</p>
-              </div>
-              {LEAD_NAV.map(({ href, label, icon, dot }) => (
-                <NavLink key={href} href={href} label={label} icon={icon} dot={dot} />
-              ))}
-            </>
-          )}
+          <div className="pt-4 pb-1.5 px-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Pipeline</p>
+          </div>
+          {LEAD_NAV.map(({ href, label, icon, dot }) => (
+            <NavLink key={href} href={href} label={label} icon={icon} dot={dot} />
+          ))}
 
+          {/* Operations (admins only), below the leads pipeline */}
           {canUseOperations(user.role) && (
             <>
               <div className="pt-4 pb-1.5 px-3">
@@ -97,17 +94,14 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
               </div>
               <NavLink href="/operations" label="Overview" icon={Briefcase} />
               <NavLink href="/operations/cases" label="Cases" icon={ClipboardList} />
+              <NavLink href="/operations/document-check" label="Document Check" icon={FileSearch} />
             </>
           )}
 
-          {user.role !== 'operations' && (
-            <>
-              <div className="pt-4 pb-1.5 px-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Admin</p>
-              </div>
-              <NavLink href="/settings" label="Settings" icon={Settings} />
-            </>
-          )}
+          <div className="pt-4 pb-1.5 px-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Admin</p>
+          </div>
+          <NavLink href="/settings" label="Settings" icon={Settings} />
           {/* <NavLink href="/blogs" label="Blogs" icon={BookOpen} /> */}
         </div>
 
