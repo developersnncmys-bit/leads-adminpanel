@@ -15,6 +15,7 @@ import { useAuthUser } from '@/lib/useAuthUser';
 import * as api from '@/lib/api';
 import { getSchema, resolveField, MANUAL_SCHEMA } from '@/lib/formSchemas';
 import { formatDate } from '@/lib/format';
+import LeadCaseBanner from '@/components/operations/LeadCaseBanner';
 
 /* ─── Predefined comment chips ─────────────────────────────────── */
 const QUICK_COMMENTS = [
@@ -452,6 +453,7 @@ function WebsiteLeadView({ leadId }: { leadId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 pb-10">
+      <LeadCaseBanner leadId={lead.id} status={lead.status} phone={lead.mobileNumber} />
 
       {/* ── Top nav bar ────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -769,6 +771,7 @@ function ManualLeadView({ leadId }: { leadId: string }) {
 
   return (
     <div className="space-y-5 max-w-5xl mx-auto">
+      <LeadCaseBanner leadId={lead.id} status={lead.status} phone={lead.mobileNumber} />
       <div className="flex items-center gap-4">
         <Link href={`/leads/${lead.status}`} className="p-2 rounded-xl hover:bg-white border border-gray-200 transition-colors">
           <ArrowLeft className="w-4 h-4 text-gray-600" />

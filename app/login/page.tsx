@@ -26,7 +26,8 @@ export default function LoginPage() {
         'crm-auth',
         JSON.stringify({ userId: user.id, name: user.name, role: user.role, email: user.email })
       );
-      router.push('/');
+      // The backend (operations) team works only in the Operations module.
+      router.push(user.role === 'operations' ? '/operations' : '/');
     } catch (err) {
       setError((err as Error).message || 'Invalid username or password.');
     } finally {

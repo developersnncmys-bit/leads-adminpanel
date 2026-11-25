@@ -14,6 +14,14 @@ import Pagination from '@/components/Pagination';
 
 const PAGE_SIZE = 10;
 
+// Role label + colours. "Operations" = backend team (Operations module only).
+const ROLE_INFO: Record<UserRole, { label: string; badge: string; selected: string }> = {
+  employee:   { label: 'Employee',   badge: 'bg-blue-50 text-blue-700',     selected: 'border-blue-500 bg-blue-50 text-blue-700' },
+  admin:      { label: 'Admin',      badge: 'bg-purple-50 text-purple-700', selected: 'border-purple-500 bg-purple-50 text-purple-700' },
+  operations: { label: 'Operations', badge: 'bg-teal-50 text-teal-700',     selected: 'border-teal-500 bg-teal-50 text-teal-700' },
+};
+const roleInfo = (r: string) => ROLE_INFO[r as UserRole] ?? ROLE_INFO.employee;
+
 interface UserForm {
   name: string;
   email: string;
@@ -321,13 +329,9 @@ export default function TeamSettingsPage() {
                   <td className="px-5 py-4 text-sm text-gray-600">{user.phone || '—'}</td>
 
                   <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${
-                      user.role === 'admin'
-                        ? 'bg-purple-50 text-purple-700'
-                        : 'bg-blue-50 text-blue-700'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${roleInfo(user.role).badge}`}>
                       <Shield className="w-3 h-3" />
-                      {user.role === 'admin' ? 'Admin' : 'Employee'}
+                      {roleInfo(user.role).label}
                     </span>
                   </td>
 
@@ -415,8 +419,8 @@ export default function TeamSettingsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-3 ml-13">
-                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg ${user.role === 'admin' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
-                  {user.role === 'admin' ? 'Admin' : 'Employee'}
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg ${roleInfo(user.role).badge}`}>
+                  {roleInfo(user.role).label}
                 </span>
                 <button
                   onClick={() => toggleStatus(user.id)}
@@ -536,22 +540,18 @@ export default function TeamSettingsPage() {
 
                 <div className="col-span-2">
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Role</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {(['employee', 'admin'] as UserRole[]).map((r) => (
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['employee', 'operations', 'admin'] as UserRole[]).map((r) => (
                       <button
                         key={r}
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, role: r }))}
                         className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
-                          form.role === r
-                            ? r === 'admin'
-                              ? 'border-purple-500 bg-purple-50 text-purple-700'
-                              : 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                          form.role === r ? ROLE_INFO[r].selected : 'border-gray-200 text-gray-500 hover:border-gray-300'
                         }`}
                       >
                         <Shield className="w-4 h-4" />
-                        {r === 'admin' ? 'Admin' : 'Employee'}
+                        {ROLE_INFO[r].label}
                       </button>
                     ))}
                   </div>

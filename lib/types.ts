@@ -9,7 +9,7 @@ export type LeadStatus =
 
 export type PaymentStatus = 'paid' | 'unpaid';
 
-export type UserRole = 'admin' | 'employee';
+export type UserRole = 'admin' | 'employee' | 'operations';
 
 export interface Lead {
   id: string;
@@ -129,4 +129,63 @@ export interface AuthUser {
   email: string;
   role: UserRole;
   avatar?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Operations — work on a customer's service after their lead converts
+// ---------------------------------------------------------------------------
+
+export type CaseStatus = 'new' | 'documents' | 'appointment' | 'applied' | 'processing' | 'completed' | 'cancelled';
+
+export interface OpsCase {
+  id: string;
+  caseNo: number;
+  leadId?: string;
+  orderId?: string;
+  date: string;            // ISO date the case started
+  service: string;
+  serviceDetail?: string;
+  source: string;
+  city: string;
+  handledBy: string;
+  appType: string;
+  scheme: string;
+  category: string;
+  name: string;
+  phone: string;
+  email: string;
+  status: CaseStatus;
+  portalLoginId: string;
+  hasPortalPassword: boolean;
+  portalPassword?: string; // only ever sent when saving a new password
+  appointmentDate: string; // YYYY-MM-DD
+  applicationNo: string;
+  amount: number;
+  extraAmount: number;
+  paymentMode: string;
+  remarks: string;
+  completedAt?: string;
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CaseSummary {
+  total: number;
+  completed: number;
+  cancelled: number;
+  open: number;
+  completionPct: number;
+  amount: number;
+  completedAmount: number;
+  byStatus: Record<CaseStatus, number>;
+}
+
+export interface CaseStats {
+  month: string;
+  summary: CaseSummary;
+  byService: (CaseSummary & { service: string; byType: (CaseSummary & { type: string })[] })[];
+  byHandler: (CaseSummary & { handledBy: string })[];
+  trend: { month: string; total: number; completed: number; completionPct: number; amount: number }[];
+  backlog: number;
 }

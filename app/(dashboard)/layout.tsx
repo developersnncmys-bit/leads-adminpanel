@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import BottomNav from '@/components/layout/BottomNav';
@@ -24,18 +24,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // confirmed a saved login (localStorage 'crm-auth'), show a spinner. If none
   // is found, send the user to /login — so opening the app cold lands on the
   // login page, not straight on the dashboard.
+  const pathname = usePathname();
   const [authed, setAuthed] = useState(false);
   useEffect(() => {
     let ok = false;
+    let role = '';
     try {
       const raw = localStorage.getItem('crm-auth');
-      ok = !!raw && !!JSON.parse(raw)?.userId;
+      const auth = raw ? JSON.parse(raw) : null;
+      ok = !!auth?.userId;
+      role = auth?.role || '';
     } catch {
       ok = false;
     }
-    if (ok) setAuthed(true);
-    else router.replace('/login');
-  }, [router]);
+    if (!ok) { router.replace('/login'); return; }
+    // The operations (backend) team only uses the Operations module.
+    if (role === 'operations' && !pathname.startsWith('/operations') && !pathname.startsWith('/profile')) {
+      router.replace('/operations');
+      return;
+    }
+    setAuthed(true);
+  }, [router, pathname]);
 
   if (!authed) {
     return (

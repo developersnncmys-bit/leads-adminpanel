@@ -4,9 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle, CalendarCheck,
-  UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap,
+  UserCheck, Clock, CheckCircle, XCircle, Settings, X, Zap, Briefcase, ClipboardList,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
+import { canUseOperations } from '@/lib/opsConfig';
 
 const LEAD_NAV = [
   { href: '/leads/new',       label: 'New Leads',         icon: UserPlus,      key: 'new',       dot: '#3b82f6' },
@@ -24,7 +25,7 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+    href === '/' || href === '/operations' ? pathname === href : pathname.startsWith(href);
 
   if (!open) return null;
 
@@ -75,20 +76,38 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
         </div>
 
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          <NavLink href="/" label="Dashboard" icon={LayoutDashboard} />
-          <NavLink href="/leads/add" label="Add Lead" icon={PlusCircle} />
+          {user.role !== 'operations' && (
+            <>
+              <NavLink href="/" label="Dashboard" icon={LayoutDashboard} />
+              <NavLink href="/leads/add" label="Add Lead" icon={PlusCircle} />
 
-          <div className="pt-4 pb-1.5 px-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Pipeline</p>
-          </div>
-          {LEAD_NAV.map(({ href, label, icon, dot }) => (
-            <NavLink key={href} href={href} label={label} icon={icon} dot={dot} />
-          ))}
+              <div className="pt-4 pb-1.5 px-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Pipeline</p>
+              </div>
+              {LEAD_NAV.map(({ href, label, icon, dot }) => (
+                <NavLink key={href} href={href} label={label} icon={icon} dot={dot} />
+              ))}
+            </>
+          )}
 
-          <div className="pt-4 pb-1.5 px-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Admin</p>
-          </div>
-          <NavLink href="/settings" label="Settings" icon={Settings} />
+          {canUseOperations(user.role) && (
+            <>
+              <div className="pt-4 pb-1.5 px-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Operations</p>
+              </div>
+              <NavLink href="/operations" label="Overview" icon={Briefcase} />
+              <NavLink href="/operations/cases" label="Cases" icon={ClipboardList} />
+            </>
+          )}
+
+          {user.role !== 'operations' && (
+            <>
+              <div className="pt-4 pb-1.5 px-3">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Admin</p>
+              </div>
+              <NavLink href="/settings" label="Settings" icon={Settings} />
+            </>
+          )}
           {/* <NavLink href="/blogs" label="Blogs" icon={BookOpen} /> */}
         </div>
 

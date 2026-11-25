@@ -5,9 +5,10 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, PlusCircle, UserPlus, AlertCircle,
   CalendarCheck, UserCheck, Clock, CheckCircle, XCircle,
-  Settings, Zap,
+  Settings, Zap, Briefcase, ClipboardList,
 } from 'lucide-react';
 import { useAuthUser } from '@/lib/useAuthUser';
+import { canUseOperations } from '@/lib/opsConfig';
 import { useAddLead } from '@/context/AddLeadContext';
 
 const LEAD_NAV = [
@@ -32,7 +33,7 @@ export default function Sidebar() {
   const initials = user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+    href === '/' || href === '/operations' ? pathname === href : pathname.startsWith(href);
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white h-screen fixed left-0 top-0 z-30 border-r border-gray-100">
@@ -51,26 +52,38 @@ export default function Sidebar() {
       {/* Nav */}
       <div className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
 
-        <NavItem href="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/') && pathname === '/'} />
-        <button
-          onClick={openModal}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all"
-        >
-          <PlusCircle className="w-4 h-4 text-gray-400" />
-          Add Lead
-        </button>
+        {user.role !== 'operations' && (
+          <>
+            <NavItem href="/" icon={LayoutDashboard} label="Dashboard" active={isActive('/') && pathname === '/'} />
+            <button
+              onClick={openModal}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300 transition-all"
+            >
+              <PlusCircle className="w-4 h-4 text-gray-400" />
+              Add Lead
+            </button>
 
-        <SectionLabel>Pipeline</SectionLabel>
-        {LEAD_NAV.map(({ href, label, icon, dot }) => (
-          <NavItem
-            key={href}
-            href={href}
-            icon={icon}
-            label={label}
-            active={isActive(href)}
-            dot={dot}
-          />
-        ))}
+            <SectionLabel>Pipeline</SectionLabel>
+            {LEAD_NAV.map(({ href, label, icon, dot }) => (
+              <NavItem
+                key={href}
+                href={href}
+                icon={icon}
+                label={label}
+                active={isActive(href)}
+                dot={dot}
+              />
+            ))}
+          </>
+        )}
+
+        {canUseOperations(user.role) && (
+          <>
+            <SectionLabel>Operations</SectionLabel>
+            <NavItem href="/operations" icon={Briefcase} label="Overview" active={isActive('/operations')} />
+            <NavItem href="/operations/cases" icon={ClipboardList} label="Cases" active={isActive('/operations/cases')} />
+          </>
+        )}
 
         {user.role === 'admin' && (
           <>

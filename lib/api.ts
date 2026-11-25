@@ -1,4 +1,4 @@
-import type { Lead, User, Blog, Career } from './types';
+import type { Lead, User, Blog, Career, OpsCase, CaseStats } from './types';
 
 // Base URL of the MMD backend. Override with NEXT_PUBLIC_API_URL in production.
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://api.makemydocuments.com';
@@ -259,4 +259,100 @@ export async function updateCareer(id: string, updates: Partial<Career>): Promis
 
 export async function deleteCareer(id: string): Promise<void> {
   await request(`/careers/${id}`, { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------------
+// Operations cases
+// ---------------------------------------------------------------------------
+
+export interface CaseQuery {
+  month?: string;      // YYYY-MM
+  service?: string;
+  status?: string;
+  handledBy?: string;
+  search?: string;
+  open?: boolean;      // only cases not completed/cancelled
+}
+
+export async function listCases(query: CaseQuery = {}): Promise<OpsCase[]> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(query)) {
+    if (v === undefined || v === '' || v === false) continue;
+    qs.set(k, v === true ? '1' : String(v));
+  }
+  const data = await request<{ data: OpsCase[] }>(`/cases?${qs}`);
+  return data.data;
+}
+
+export async function getCaseStats(month?: string): Promise<CaseStats> {
+  const data = await request<{ data: CaseStats }>(`/cases/stats${month ? `?month=${month}` : ''}`);
+  return data.data;
+}
+
+export async function getCaseByLead(leadId: string): Promise<OpsCase | null> {
+  const data = await request<{ data: OpsCase | null }>(`/cases/by-lead/${leadId}`);
+  return data.data;
+}
+
+// The customer's portal password — fetched only when someone clicks "show".
+export async function getCasePassword(id: string): Promise<string> {
+  const data = await request<{ data: { portalPassword: string } }>(`/cases/${id}/secret`);
+  return data.data.portalPassword;
+}
+
+// A converted lead that has no case yet (e.g. converted before Operations existed).
+export interface PendingLead {
+  id: string;
+  name: string;
+  mobileNumber: string;
+  service: string;
+  city: string;
+  amount: number;
+  source: string;
+  orderId: string;
+  convertedAt: string;
+}
+
+export async function listPendingLeads(search = ''): Promise<{ total: number; leads: PendingLead[] }> {
+  const data = await request<{ total: number; data: PendingLead[] }>(`/cases/pending-leads?search=${encodeURIComponent(search)}`);
+  return { total: data.total, leads: data.data };
+}
+
+// Hand a converted lead over to operations as a case.
+export async function createCaseFromLead(leadId: string): Promise<OpsCase> {
+  const data = await request<{ data: OpsCase }>(`/cases/from-lead/${leadId}`, { method: 'POST' });
+  return data.data;
+}
+
+// Hand over every converted lead that is still waiting (one click).
+export async function handOverAllPending(): Promise<{ created: number; failed: number }> {
+  const data = await request<{ data: { created: number; failed: number } }>('/cases/from-leads/all', { method: 'POST' });
+  return data.data;
+}
+
+export interface ImportResult {
+  created: number;
+  duplicates: number;
+  errors: { row: number; reason: string }[];
+}
+
+// Rows from the team's old Google Sheet tabs.
+export async function importCases(rows: Partial<OpsCase>[], createdBy = 'Import'): Promise<ImportResult> {
+  const data = await request<{ data: ImportResult }>('/cases/import', {
+    method: 'POST',
+    body: JSON.stringify({ rows, createdBy }),
+  });
+  return data.data;
+}
+
+export async function updateCase(id: string, updates: Partial<OpsCase>): Promise<OpsCase> {
+  const data = await request<{ data: OpsCase }>(`/cases/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(updates),
+  });
+  return data.data;
+}
+
+export async function deleteCase(id: string): Promise<void> {
+  await request(`/cases/${id}`, { method: 'DELETE' });
 }
