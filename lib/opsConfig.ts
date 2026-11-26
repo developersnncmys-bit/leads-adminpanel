@@ -169,3 +169,19 @@ export function columnLabel(col: CaseColumn, service: string): string {
     case 'mode': return 'Mode';
   }
 }
+
+// Display text as "Capital first, rest small": "MS MASUMI CHAUDHARY" ->
+// "Ms Masumi Chaudhary", "WEBSITE" -> "Website". Short codes stay in capitals
+// (UPI, PAN, MMD …). Display only — the saved data is not changed.
+const KEEP_UPPER = new Set([
+  'UPI', 'PAN', 'PVC', 'PCC', 'MMD', 'LOP', 'ARN', 'NEFT', 'IMPS', 'RTGS', 'GPAY', 'SSLC', 'PUC',
+  'ID', 'NRI', 'KYC', 'EKYC', 'CSC', 'BSK', 'MSME', 'DL', 'LMV', 'II', 'III', 'IV',
+]);
+export function tc(s?: string): string {
+  if (!s) return '';
+  return s
+    .toLowerCase()
+    .replace(/[a-z][a-z']*/g, (w) => (KEEP_UPPER.has(w.toUpperCase()) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)))
+    .replace(/\s+/g, ' ')
+    .trim();
+}

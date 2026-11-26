@@ -12,7 +12,7 @@ import { Search, Loader2, Download, ArrowLeft, ClipboardList, RefreshCw, Upload,
 import * as api from '@/lib/api';
 import type { OpsCase, CaseStatus } from '@/lib/types';
 import {
-  CASE_STATUS, OPS_SERVICES, SERVICE_TAB, statusInfo, rupees, thisMonth, monthLabel, pctTone, isAutoCompleteCase, columnsFor, columnLabel, type CaseColumn,
+  CASE_STATUS, OPS_SERVICES, SERVICE_TAB, statusInfo, rupees, thisMonth, monthLabel, pctTone, isAutoCompleteCase, columnsFor, columnLabel, tc, type CaseColumn,
 } from '@/lib/opsConfig';
 import OpsGate from '@/components/operations/OpsGate';
 import CaseEditor from '@/components/operations/CaseEditor';
@@ -296,9 +296,9 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
             <table className="w-full text-[13px] select-text">
               <thead>
                 <tr className="bg-gray-50 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap">
-                  <th className="px-2.5 py-3">Sl No</th>
+                  <th className="px-3 py-3">Sl No</th>
                   {cols.map((c) => (
-                    <th key={c} className={`px-2.5 py-3 ${c === 'name' ? 'min-w-[170px]' : c === 'status' ? 'min-w-[140px]' : ''} ${c === 'amount' ? 'text-right' : ''}`}>
+                    <th key={c} className={`px-3 py-3 ${c === 'name' ? 'min-w-[170px]' : c === 'status' ? 'min-w-[140px]' : ''} ${c === 'amount' ? 'text-right' : ''}`}>
                       {columnLabel(c, tab)}
                     </th>
                   ))}
@@ -308,24 +308,24 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
               <tbody>
                 {pageRows.map((r, i) => {
                   const st = statusInfo(r.status);
-                  const td = 'px-2.5 py-2.5 align-top whitespace-nowrap';
+                  const td = 'px-3 py-3 align-middle whitespace-nowrap';
                   const cell = (c: CaseColumn) => {
                     switch (c) {
                       case 'date': return <td key={c} className={`${td} text-gray-600`}>{fmtDay(r.date)}</td>;
-                      case 'source': return <td key={c} className={`${td} text-gray-600`}>{r.source || '—'}</td>;
-                      case 'city': return <td key={c} className={`${td} text-gray-600`}>{r.city || '—'}</td>;
-                      case 'handledBy': return <td key={c} className={`${td} font-semibold text-gray-700`}>{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>;
+                      case 'source': return <td key={c} className={`${td} text-gray-600`}>{tc(r.source) || '—'}</td>;
+                      case 'city': return <td key={c} className={`${td} text-gray-600`}>{tc(r.city) || '—'}</td>;
+                      case 'handledBy': return <td key={c} className={`${td} font-semibold text-gray-700`}>{tc(r.handledBy) || <span className="text-amber-600 font-normal">Unassigned</span>}</td>;
                       case 'type': return (
                         <td key={c} className={`${td} text-gray-700`}>
-                          {r.appType || '—'}
-                          {!tab && <span className="block text-[11px] text-gray-400">{SERVICE_TAB[r.service] ?? r.service}{r.scheme ? ` · ${r.scheme}` : ''}</span>}
-                          {tab && r.scheme && <span className="block text-[11px] text-gray-400">{r.scheme}</span>}
+                          {tc(r.appType) || '—'}
+                          {!tab && <span className="block text-[11px] text-gray-400">{SERVICE_TAB[r.service] ?? r.service}{r.scheme ? ` · ${tc(r.scheme)}` : ''}</span>}
+                          {tab && r.scheme && <span className="block text-[11px] text-gray-400">{tc(r.scheme)}</span>}
                         </td>
                       );
-                      case 'category': return <td key={c} className={`${td} text-gray-700`}>{r.category || '—'}</td>;
+                      case 'category': return <td key={c} className={`${td} text-gray-700`}>{tc(r.category) || '—'}</td>;
                       case 'name': return (
-                        <td key={c} className="px-2.5 py-2.5 align-top font-semibold text-gray-900">
-                          {r.name}
+                        <td key={c} className={`${td} font-semibold text-gray-900`}>
+                          {tc(r.name)}
                           {/* Ack / application no. under the name when the tab has no column for it */}
                           {!cols.includes('ack') && r.applicationNo && <span className="block text-[11px] font-normal text-gray-400">Ack/App: <CopyCell value={r.applicationNo} /></span>}
                         </td>
@@ -362,12 +362,12 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                           </span>
                         </td>
                       );
-                      case 'mode': return <td key={c} className={`${td} text-gray-600`}>{r.paymentMode || '—'}</td>;
+                      case 'mode': return <td key={c} className={`${td} text-gray-600`}>{tc(r.paymentMode) || '—'}</td>;
                     }
                   };
                   return (
                     <tr key={r.id} className="border-t border-gray-50 hover:bg-blue-50/30">
-                      <td className={`${td} text-gray-400 tabular-nums`}>{offset + i + 1}</td>
+                      <td className={`${td} text-gray-400 tabular-nums text-center`}>{offset + i + 1}</td>
                       {cols.map(cell)}
                       <td className={td}>
                         <button onClick={() => setEditing(r)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Edit case">
