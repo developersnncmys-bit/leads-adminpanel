@@ -75,34 +75,42 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
     try {
       // "open" = everything not completed/cancelled, from any month.
       const open = status === 'open';
-      setRows(await api.listCases({ month: open ? '' : month, status: open ? '' : status, open, handledBy, search }));
+      setRows(await api.listCases({ month: open ? '' : month, status: open ? '' : status, open, search }));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load cases');
     } finally {
       setLoading(false);
     }
-  }, [month, status, handledBy, search]);
+  }, [month, status, search]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Team names for "Handled by": all active team members.
+  // "Whole team" filter: only the team members in Team Settings (active
+  // employees), each once, written "Ganesh" — not every spelling found in
+  // the cases ("GANESH", "Ganesh" …).
   useEffect(() => {
     api.listUsers()
-      .then((us) => setTeam(us.filter((u) => u.status !== 'inactive').map((u) => u.name.toUpperCase())))
+      .then((us) => setTeam(us.filter((u) => u.status !== 'inactive' && u.role === 'employee').map((u) => tc(u.name))))
       .catch(() => setTeam([]));
   }, []);
-  const teamOptions = useMemo(
-    () => [...new Set([...team, ...rows.map((r) => r.handledBy).filter(Boolean)])].sort(),
-    [team, rows],
-  );
+  const norm = (s?: string) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const teamOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return team.filter((n) => !seen.has(norm(n)) && !!seen.add(norm(n))).sort((a, b) => a.localeCompare(b));
+  }, [team]);
 
+  // Handled-by filter matches however the name was typed in the case.
+  const teamRows = useMemo(
+    () => (handledBy ? rows.filter((r) => norm(r.handledBy) === norm(handledBy)) : rows),
+    [rows, handledBy],
+  );
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
-    rows.forEach((r) => { c[r.service] = (c[r.service] || 0) + 1; });
+    teamRows.forEach((r) => { c[r.service] = (c[r.service] || 0) + 1; });
     return c;
-  }, [rows]);
+  }, [teamRows]);
   const tabs = OPS_SERVICES.filter((s) => counts[s] || s === tab || ['Passport', 'PAN Card', 'Police Verification Certificate (PVC)', 'Senior Citizen Card', 'Affidavits / Annexure', 'Complaint Copy'].includes(s));
-  const visible = tab ? rows.filter((r) => r.service === tab) : rows;
+  const visible = tab ? teamRows.filter((r) => r.service === tab) : teamRows;
   // Columns for this tab, in the order of the team's sheet for that service.
   const cols = columnsFor(tab);
   // Latest added first (by when the case was created, so a lead handed over
@@ -240,7 +248,7 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
       {/* Service tabs — like the sheet's tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {[['', 'All'] as const, ...tabs.map((s) => [s, SERVICE_TAB[s] ?? s] as const)].map(([key, label]) => {
-          const n = key ? counts[key] || 0 : rows.length;
+          const n = key ? counts[key] || 0 : teamRows.length;
           const active = tab === key;
           return (
             <button
