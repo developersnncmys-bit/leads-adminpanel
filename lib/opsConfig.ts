@@ -123,3 +123,49 @@ export const pctTone = (pct: number) =>
 export const AUTO_COMPLETE_SERVICES = ['PAN Card'];
 export const isAutoCompleteCase = (c: { leadId?: string; service: string }) =>
   !!c.leadId && AUTO_COMPLETE_SERVICES.includes(c.service);
+
+// ---------------------------------------------------------------------------
+// Columns per service — the Cases table AND the import sample CSV use these,
+// in this order, matching each of the team's sheet tabs.
+// ---------------------------------------------------------------------------
+
+export type CaseColumn =
+  | 'date' | 'source' | 'city' | 'handledBy' | 'type' | 'category' | 'name' | 'mobile'
+  | 'email' | 'ack' | 'status' | 'loginId' | 'password' | 'appointment' | 'amount' | 'mode';
+
+const DEFAULT_COLUMNS: CaseColumn[] = [
+  'date', 'source', 'city', 'handledBy', 'type', 'category', 'name', 'mobile', 'email',
+  'status', 'loginId', 'password', 'appointment', 'amount', 'mode',
+];
+
+export const SERVICE_COLUMNS: Record<string, CaseColumn[]> = {
+  'PAN Card': ['date', 'source', 'city', 'type', 'handledBy', 'name', 'mobile', 'email', 'ack', 'status', 'amount', 'mode'],
+  'Police Verification Certificate (PVC)': ['date', 'source', 'city', 'handledBy', 'type', 'name', 'mobile', 'status', 'loginId', 'password', 'appointment', 'amount', 'mode'],
+  'Senior Citizen Card': ['date', 'source', 'city', 'handledBy', 'name', 'mobile', 'email', 'ack', 'status', 'loginId', 'password', 'amount', 'mode'],
+  'Affidavits / Annexure': ['date', 'source', 'city', 'type', 'handledBy', 'name', 'mobile', 'status', 'amount', 'mode'],
+  'Tourist Visa': ['date', 'source', 'city', 'type', 'handledBy', 'name', 'mobile', 'email', 'status', 'amount', 'mode'],
+};
+
+// '' = the "All services" view.
+export const columnsFor = (service: string): CaseColumn[] => SERVICE_COLUMNS[service] ?? DEFAULT_COLUMNS;
+
+export function columnLabel(col: CaseColumn, service: string): string {
+  switch (col) {
+    case 'date': return 'Date';
+    case 'source': return 'Source';
+    case 'city': return 'City';
+    case 'handledBy': return 'Handled by';
+    case 'type': return service === 'Tourist Visa' ? 'Country' : 'Type';
+    case 'category': return 'Category';
+    case 'name': return 'Name';
+    case 'mobile': return 'Mobile';
+    case 'email': return 'Email';
+    case 'ack': return 'Acknowledgement no';
+    case 'status': return 'Status';
+    case 'loginId': return 'Login ID';
+    case 'password': return 'Password';
+    case 'appointment': return 'Appointment';
+    case 'amount': return 'Amount';
+    case 'mode': return 'Mode';
+  }
+}

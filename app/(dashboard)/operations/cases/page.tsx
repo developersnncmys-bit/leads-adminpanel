@@ -12,7 +12,7 @@ import { Search, Loader2, Download, ArrowLeft, ClipboardList, RefreshCw, Upload,
 import * as api from '@/lib/api';
 import type { OpsCase, CaseStatus } from '@/lib/types';
 import {
-  CASE_STATUS, OPS_SERVICES, SERVICE_TAB, statusInfo, rupees, thisMonth, monthLabel, pctTone, isAutoCompleteCase,
+  CASE_STATUS, OPS_SERVICES, SERVICE_TAB, statusInfo, rupees, thisMonth, monthLabel, pctTone, isAutoCompleteCase, columnsFor, columnLabel, type CaseColumn,
 } from '@/lib/opsConfig';
 import OpsGate from '@/components/operations/OpsGate';
 import CaseEditor from '@/components/operations/CaseEditor';
@@ -103,8 +103,8 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   }, [rows]);
   const tabs = OPS_SERVICES.filter((s) => counts[s] || s === tab || ['Passport', 'PAN Card', 'Police Verification Certificate (PVC)', 'Senior Citizen Card', 'Affidavits / Annexure', 'Complaint Copy'].includes(s));
   const visible = tab ? rows.filter((r) => r.service === tab) : rows;
-  // PAN Card has no category, portal login/password or appointment — hide those columns.
-  const panTab = tab === 'PAN Card';
+  // Columns for this tab, in the order of the team's sheet for that service.
+  const cols = columnsFor(tab);
   // Oldest first, like the sheet, so Sl No runs 1, 2, 3 … down the page.
   const sorted = useMemo(
     () => [...visible].sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.caseNo - b.caseNo),
@@ -294,21 +294,11 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
               <thead>
                 <tr className="bg-gray-50 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap">
                   <th className="px-2.5 py-3">Sl No</th>
-                  <th className="px-2.5 py-3">Date</th>
-                  <th className="px-2.5 py-3">Source</th>
-                  <th className="px-2.5 py-3">City</th>
-                  <th className="px-2.5 py-3">Handled by</th>
-                  <th className="px-2.5 py-3">Type</th>
-                  {!panTab && <th className="px-2.5 py-3">Category</th>}
-                  <th className="px-2.5 py-3 min-w-[170px]">Name</th>
-                  <th className="px-2.5 py-3">Mobile</th>
-                  <th className="px-2.5 py-3">Email</th>
-                  <th className="px-2.5 py-3 min-w-[140px]">Status</th>
-                  {!panTab && <th className="px-2.5 py-3">ID</th>}
-                  {!panTab && <th className="px-2.5 py-3">Password</th>}
-                  {!panTab && <th className="px-2.5 py-3">Appointment</th>}
-                  <th className="px-2.5 py-3 text-right">Amount</th>
-                  <th className="px-2.5 py-3">Mode</th>
+                  {cols.map((c) => (
+                    <th key={c} className={`px-2.5 py-3 ${c === 'name' ? 'min-w-[170px]' : c === 'status' ? 'min-w-[140px]' : ''} ${c === 'amount' ? 'text-right' : ''}`}>
+                      {columnLabel(c, tab)}
+                    </th>
+                  ))}
                   <th className="px-2.5 py-3" />
                 </tr>
               </thead>
@@ -316,51 +306,66 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                 {pageRows.map((r, i) => {
                   const st = statusInfo(r.status);
                   const td = 'px-2.5 py-2.5 align-top whitespace-nowrap';
+                  const cell = (c: CaseColumn) => {
+                    switch (c) {
+                      case 'date': return <td key={c} className={`${td} text-gray-600`}>{fmtDay(r.date)}</td>;
+                      case 'source': return <td key={c} className={`${td} text-gray-600`}>{r.source || '—'}</td>;
+                      case 'city': return <td key={c} className={`${td} text-gray-600`}>{r.city || '—'}</td>;
+                      case 'handledBy': return <td key={c} className={`${td} font-semibold text-gray-700`}>{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>;
+                      case 'type': return (
+                        <td key={c} className={`${td} text-gray-700`}>
+                          {r.appType || '—'}
+                          {!tab && <span className="block text-[11px] text-gray-400">{SERVICE_TAB[r.service] ?? r.service}{r.scheme ? ` · ${r.scheme}` : ''}</span>}
+                          {tab && r.scheme && <span className="block text-[11px] text-gray-400">{r.scheme}</span>}
+                        </td>
+                      );
+                      case 'category': return <td key={c} className={`${td} text-gray-700`}>{r.category || '—'}</td>;
+                      case 'name': return (
+                        <td key={c} className="px-2.5 py-2.5 align-top font-semibold text-gray-900">
+                          {r.name}
+                          {/* Ack / application no. under the name when the tab has no column for it */}
+                          {!cols.includes('ack') && r.applicationNo && <span className="block text-[11px] font-normal text-gray-400">Ack/App: <CopyCell value={r.applicationNo} /></span>}
+                        </td>
+                      );
+                      case 'mobile': return <td key={c} className={td}><CopyCell value={r.phone} /></td>;
+                      case 'email': return <td key={c} className={td}><CopyCell value={r.email} /></td>;
+                      case 'ack': return <td key={c} className={td}><CopyCell value={r.applicationNo} /></td>;
+                      case 'status': return (
+                        <td key={c} className={td}>
+                          {isAutoCompleteCase(r) ? (
+                            // PAN Card from a converted lead: completed automatically, not changeable.
+                            <span className={`inline-block text-xs font-semibold rounded-lg px-2.5 py-1.5 ${statusInfo('completed').cls}`} title="PAN Card: completed when the lead converted">
+                              {statusInfo('completed').short}
+                            </span>
+                          ) : (
+                            <select
+                              value={r.status}
+                              onChange={(e) => changeStatus(r, e.target.value as CaseStatus)}
+                              className={`text-xs font-semibold rounded-lg px-2 py-1.5 border-0 ${st.cls}`}
+                            >
+                              {CASE_STATUS.map((s) => <option key={s.key} value={s.key}>{s.short}</option>)}
+                            </select>
+                          )}
+                        </td>
+                      );
+                      case 'loginId': return <td key={c} className={td}><CopyCell value={r.portalLoginId} /></td>;
+                      case 'password': return <td key={c} className={td}><PasswordCell c={r} /></td>;
+                      case 'appointment': return <td key={c} className={`${td} text-gray-600`}>{fmtYmd(r.appointmentDate) || '—'}</td>;
+                      case 'amount': return (
+                        <td key={c} className={`${td} text-right`}>
+                          <span className="font-semibold text-gray-900">{rupees((r.amount || 0) + (r.extraAmount || 0))}</span>
+                          <span className="block text-[11px] text-gray-400">
+                            {r.extraAmount ? `Govt ${rupees(r.extraAmount)} · MMD ${rupees(r.amount || 0)}` : `MMD ${rupees(r.amount || 0)}`}
+                          </span>
+                        </td>
+                      );
+                      case 'mode': return <td key={c} className={`${td} text-gray-600`}>{r.paymentMode || '—'}</td>;
+                    }
+                  };
                   return (
                     <tr key={r.id} className="border-t border-gray-50 hover:bg-blue-50/30">
                       <td className={`${td} text-gray-400 tabular-nums`}>{offset + i + 1}</td>
-                      <td className={`${td} text-gray-600`}>{fmtDay(r.date)}</td>
-                      <td className={`${td} text-gray-600`}>{r.source || '—'}</td>
-                      <td className={`${td} text-gray-600`}>{r.city || '—'}</td>
-                      <td className={`${td} font-semibold text-gray-700`}>{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>
-                      <td className={`${td} text-gray-700`}>
-                        {r.appType || '—'}
-                        {!tab && <span className="block text-[11px] text-gray-400">{SERVICE_TAB[r.service] ?? r.service}{r.scheme ? ` · ${r.scheme}` : ''}</span>}
-                        {tab && r.scheme && <span className="block text-[11px] text-gray-400">{r.scheme}</span>}
-                      </td>
-                      {!panTab && <td className={`${td} text-gray-700`}>{r.category || '—'}</td>}
-                      <td className="px-2.5 py-2.5 align-top font-semibold text-gray-900">
-                        {r.name}
-                        {r.applicationNo && <span className="block text-[11px] font-normal text-gray-400">Ack/App: <CopyCell value={r.applicationNo} /></span>}
-                      </td>
-                      <td className={td}><CopyCell value={r.phone} /></td>
-                      <td className={td}><CopyCell value={r.email} /></td>
-                      <td className={td}>
-                        {isAutoCompleteCase(r) ? (
-                          // PAN Card from a converted lead: completed automatically, not changeable.
-                          <span className={`inline-block text-xs font-semibold rounded-lg px-2.5 py-1.5 ${statusInfo('completed').cls}`} title="PAN Card: completed when the lead converted">
-                            {statusInfo('completed').short}
-                          </span>
-                        ) : (
-                          <select
-                            value={r.status}
-                            onChange={(e) => changeStatus(r, e.target.value as CaseStatus)}
-                            className={`text-xs font-semibold rounded-lg px-2 py-1.5 border-0 ${st.cls}`}
-                          >
-                            {CASE_STATUS.map((s) => <option key={s.key} value={s.key}>{s.short}</option>)}
-                          </select>
-                        )}
-                      </td>
-                      {!panTab && <td className={td}><CopyCell value={r.portalLoginId} /></td>}
-                      {!panTab && <td className={td}><PasswordCell c={r} /></td>}
-                      {!panTab && <td className={`${td} text-gray-600`}>{fmtYmd(r.appointmentDate) || '—'}</td>}
-                      <td className={`${td} text-right`}>
-                        <span className="font-semibold text-gray-900">{rupees((r.amount || 0) + (r.extraAmount || 0))}</span>
-                        <span className="block text-[11px] text-gray-400">
-                          {r.extraAmount ? `Govt ${rupees(r.extraAmount)} · MMD ${rupees(r.amount || 0)}` : `MMD ${rupees(r.amount || 0)}`}
-                        </span>
-                      </td>
-                      <td className={`${td} text-gray-600`}>{r.paymentMode || '—'}</td>
+                      {cols.map(cell)}
                       <td className={td}>
                         <button onClick={() => setEditing(r)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Edit case">
                           <Pencil className="w-4 h-4" />

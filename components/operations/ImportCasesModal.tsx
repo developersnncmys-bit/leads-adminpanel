@@ -67,6 +67,12 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
   const cases = useMemo(() => dataRows.map((r) => rowToCase(r, map, service)), [dataRows, map, service]);
   const valid = cases.filter((c) => c.name);
   const width = Math.max(...rows.slice(0, 20).map((r) => r.length), 0);
+  // Excel turns long numbers (ack nos., mobiles) into "8.81154E+14" when it
+  // saves a CSV — the real digits are gone and can't be recovered.
+  const excelMangled = useMemo(
+    () => dataRows.filter((r) => r.some((c) => /^\d(\.\d+)?E\+\d+$/i.test(String(c).trim()))).length,
+    [dataRows],
+  );
   const colLabel = (i: number) => {
     const sample = (hasHeader ? rows[0][i] : dataRows[0]?.[i]) || '';
     return `Column ${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i / 26) : ''}${sample ? ` — ${sample.slice(0, 22)}` : ''}`;
@@ -206,6 +212,15 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
                     </div>
                     {map.name === undefined && (
                       <p className="flex items-center gap-1.5 text-xs text-amber-700 mt-2"><AlertTriangle className="w-3.5 h-3.5" /> Pick which column has the customer name.</p>
+                    )}
+                    {excelMangled > 0 && (
+                      <p className="flex items-start gap-1.5 text-xs text-red-700 bg-red-50 rounded-lg px-3 py-2 mt-2">
+                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                        <span>
+                          <b>{excelMangled} row{excelMangled > 1 ? 's have' : ' has'} numbers like “8.81154E+14”</b> — Excel shortened the ack / mobile numbers when it saved this file, so the real digits are lost.
+                          Download the CSV straight from <b>Google Sheets (File → Download → CSV)</b> without opening it in Excel, or format those columns as Text first.
+                        </span>
+                      </p>
                     )}
                   </div>
                 </>

@@ -5,7 +5,7 @@
 // doesn't shift everything.
 
 import type { CaseStatus, OpsCase } from './types';
-import { serviceFields } from './opsConfig';
+import { serviceFields, columnsFor, columnLabel, type CaseColumn } from './opsConfig';
 
 export type ImportField =
   | 'date' | 'source' | 'city' | 'handledBy' | 'appType' | 'scheme' | 'category'
@@ -17,7 +17,7 @@ export const IMPORT_FIELDS: { key: ImportField; label: string; header: RegExp }[
   { key: 'source',          label: 'Source',            header: /source|lead from|\bvia\b|reference type/i },
   { key: 'city',            label: 'City',              header: /city|place|location|district|branch/i },
   { key: 'handledBy',       label: 'Handled by',        header: /handled|staff|executive|employee|agent|assigned|done by/i },
-  { key: 'appType',         label: 'Type',              header: /^type$|application type|app\.? type|fresh|request type|service type/i },
+  { key: 'appType',         label: 'Type',              header: /^type$|application type|app\.? type|fresh|request type|service type|country|purpose/i },
   { key: 'scheme',          label: 'Scheme',            header: /scheme|normal|tatkal/i },
   { key: 'category',        label: 'Category',          header: /category|adult|minor/i },
   { key: 'name',            label: 'Customer name *',   header: /name|customer|applicant|client/i },
@@ -35,53 +35,41 @@ export const IMPORT_FIELDS: { key: ImportField; label: string; header: RegExp }[
 
 export type Mapping = Partial<Record<ImportField, number>>; // field -> column index (-1 = none)
 
-// Sample file for the "Download sample CSV" button — only the columns that
-// service uses (PAN Card: no portal login / password; no appointment, etc.).
+// Sample file for the "Download sample CSV" button — the same columns, in the
+// same order, as that service's table (see SERVICE_COLUMNS in opsConfig).
 export function sampleCsv(service: string): string {
   const f = serviceFields(service);
   const t = (i: number) => f.types[i % f.types.length] ?? '';
+  const pan = service === 'PAN Card';
+  const header: Partial<Record<CaseColumn, string>> = {
+    handledBy: 'Handled By', ack: 'Acknowledgement No', appointment: 'Appointment Date', loginId: 'Login ID',
+  };
+  const values: Record<CaseColumn, [string, string]> = {
+    date: ['21/11/2026', '22/11/2026'],
+    source: ['REF', 'WEBSITE'],
+    city: ['BENGALURU', 'MYSURU'],
+    handledBy: ['SUNEETHA', 'MURTHY'],
+    type: [t(0), t(1)],
+    category: ['ADULT', 'MINOR'],
+    name: ['MR RAVI KUMAR', 'MS PRIYA S'],
+    mobile: ['9876543210', '9123456780'],
+    email: ['ravi@example.com', 'priya@example.com'],
+    ack: [pan ? '881154233432351' : 'ACK1234567', pan ? '881154235535092' : 'ACK7654321'],
+    status: [pan ? 'COMPLETED' : 'IN DOC VEF', 'COMPLETED'],
+    loginId: ['', 'PRIY01011995'],
+    password: ['', 'Priya@123'],
+    appointment: ['', '28/11/2026'],
+    amount: pan ? ['350', '350'] : ['3500', f.scheme ? '3500+2000' : '1500'],
+    mode: ['UPI', 'CASH'],
+  };
+  const cols = columnsFor(service);
   const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  const toCsv = (cols: [string, string, string][]) =>
-    [0, 1, 2].map((i) => cols.map((c) => esc(c[i])).join(',')).join('\r\n');
-
-  // PAN Card: exactly the team's PAN sheet columns, in their order.
-  if (service === 'PAN Card') {
-    return toCsv([
-      ['Date', '21/11/2026', '22/11/2026'],
-      ['Source', 'WEBSITE', 'REF'],
-      ['City', 'BENGALURU', 'MYSURU'],
-      ['Type', 'NEW', 'CORRECTION'],
-      ['Handled By', 'GANESH', 'SUNEETHA'],
-      ['Name', 'MR RAVI KUMAR', 'MS PRIYA S'],
-      ['Mobile', '9876543210', '9123456780'],
-      ['Email', 'ravi@example.com', 'priya@example.com'],
-      ['Acknowledgement No', '881154233432351', '881154235535092'],
-      ['Status', 'COMPLETED', 'COMPLETED'],
-      ['Amount', '350', '350'],
-      ['Mode', 'UPI', 'Online (Paytm)'],
-    ]);
-  }
-
-  const cols: [string, string, string][] = [
-    ['Date', '21/11/2026', '22/11/2026'],
-    ['Source', 'REF', 'WEBSITE'],
-    ['City', 'BENGALURU', 'MYSURU'],
-    ['Handled By', 'SUNEETHA', 'MURTHY'],
-    ['Type', t(0), t(1)],
-    ...(f.scheme ? [['Scheme', f.scheme[0], f.scheme[1] ?? f.scheme[0]] as [string, string, string]] : []),
-    ...(f.category ? [['Category', 'ADULT', 'ADULT'] as [string, string, string]] : []),
-    ['Name', 'MR RAVI KUMAR', 'MS PRIYA S'],
-    ['Mobile', '9876543210', '9123456780'],
-    ['Email', 'ravi@example.com', 'priya@example.com'],
-    ['Status', 'IN DOC VEF', 'COMPLETED'],
-    ...(f.portal ? [['Login ID', '', 'PRIY01011995'], ['Password', '', 'Priya@123']] as [string, string, string][] : []),
-    ...(f.appointment ? [['Appointment Date', '', '28/11/2026']] as [string, string, string][] : []),
-    [f.applicationNoLabel.replace(/,/g, ' '), '', service === 'PAN Card' ? '881154233432351' : 'ABC123456'],
-    ['Amount', '3500', f.scheme ? '3500+2000' : '3500'],
-    ['Payment Mode', 'UPI', 'CASH'],
-    ['Remarks', '', ''],
-  ];
-  return toCsv(cols);
+  const line = (vals: string[]) => vals.map(esc).join(',');
+  return [
+    line(cols.map((c) => header[c] ?? columnLabel(c, service))),
+    line(cols.map((c) => values[c][0])),
+    line(cols.map((c) => values[c][1])),
+  ].join('\r\n');
 }
 
 // Does the first row look like column names rather than a customer?
