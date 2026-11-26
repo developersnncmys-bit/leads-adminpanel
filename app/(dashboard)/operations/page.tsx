@@ -103,8 +103,18 @@ function Overview() {
           {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Kpi label="Cases this month" value={String(s.total)} sub={`${s.open} still open`} from="from-blue-500" to="to-blue-600" />
-            <Kpi label="Completed" value={String(s.completed)} sub={rupees(s.completedAmount) + ' done'} from="from-emerald-500" to="to-emerald-600" />
-            <Kpi label="Amount" value={rupees(s.amount)} sub="incl. extra / govt fees" from="from-violet-500" to="to-violet-600" />
+            <Kpi
+              label="Completed"
+              value={String(s.completed)}
+              sub={`${rupees(s.completedAmount)} · Govt ${rupees(s.completedGovtFee ?? 0)} + MMD ${rupees(s.completedServiceFee ?? 0)}`}
+              from="from-emerald-500" to="to-emerald-600"
+            />
+            <Kpi
+              label="Total amount"
+              value={rupees(s.amount)}
+              sub={`Govt fee ${rupees(s.govtFee ?? 0)} · MMD fee ${rupees(s.serviceFee ?? 0)}`}
+              from="from-violet-500" to="to-violet-600"
+            />
             <Link href="/operations/cases?status=open" className="block">
               <Kpi label="Open backlog" value={String(stats.backlog)} sub="all months · view →" from="from-amber-500" to="to-amber-600" />
             </Link>

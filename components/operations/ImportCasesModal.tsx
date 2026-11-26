@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { X, Upload, Loader2, CheckCircle, AlertTriangle, FileSpreadsheet, Download } from 'lucide-react';
 import * as api from '@/lib/api';
 import { parseCsv } from '@/lib/csv';
-import { IMPORT_FIELDS, SAMPLE_CSV, guessMapping, looksLikeHeader, rowToCase, type ImportField, type Mapping } from '@/lib/caseImport';
+import { IMPORT_FIELDS, sampleCsv, guessMapping, looksLikeHeader, rowToCase, type ImportField, type Mapping } from '@/lib/caseImport';
 import { OPS_SERVICES, rupees, statusInfo } from '@/lib/opsConfig';
 
 export default function ImportCasesModal({ defaultService, onClose, onDone }: {
@@ -52,10 +52,11 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
   };
 
   const downloadSample = () => {
-    const blob = new Blob(['﻿' + SAMPLE_CSV], { type: 'text/csv;charset=utf-8' });
+    // Byte-order mark so Excel opens it as UTF-8.
+    const blob = new Blob([String.fromCharCode(0xfeff) + sampleCsv(service)], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'operations-import-sample.csv';
+    a.download = `sample-${service.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`;
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -98,7 +99,7 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
               Rows for a customer who is already a converted lead (same mobile + service) are linked to that lead — no second case.
             </p>
             <button onClick={downloadSample} className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800">
-              <Download className="w-3.5 h-3.5" /> Download sample CSV
+              <Download className="w-3.5 h-3.5" /> Download {service} sample CSV
             </button>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100" title="Close"><X className="w-5 h-5 text-gray-500" /></button>

@@ -17,7 +17,6 @@ import {
 import OpsGate from '@/components/operations/OpsGate';
 import CaseEditor from '@/components/operations/CaseEditor';
 import HandoverModal from '@/components/operations/HandoverModal';
-import Pagination from '@/components/Pagination';
 import ImportCasesModal from '@/components/operations/ImportCasesModal';
 
 export default function CasesPage() {
@@ -112,7 +111,7 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
 
   // Pagination — back to page 1 whenever the filters or tab change.
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   useEffect(() => { setPage(1); }, [tab, month, status, handledBy, search, pageSize]);
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -123,10 +122,14 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
     const completed = visible.filter((r) => r.status === 'completed').length;
     const cancelled = visible.filter((r) => r.status === 'cancelled').length;
     const live = visible.length - cancelled;
+    const done = visible.filter((r) => r.status === 'completed');
+    const mmd = (list: OpsCase[]) => list.reduce((s, r) => s + (r.amount || 0), 0);
+    const govt = (list: OpsCase[]) => list.reduce((s, r) => s + (r.extraAmount || 0), 0);
     return {
       total: visible.length, completed,
       pct: live ? Math.round((completed / live) * 100) : 0,
-      amount: visible.reduce((s, r) => s + (r.amount || 0) + (r.extraAmount || 0), 0),
+      mmd: mmd(visible), govt: govt(visible),
+      doneMmd: mmd(done), doneGovt: govt(done),
     };
   }, [visible]);
 
@@ -142,7 +145,7 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   };
 
   const exportCsv = () => {
-    const head = ['Sl No', 'Date', 'Service', 'Type', 'Scheme', 'Category', 'Source', 'City', 'Handled by', 'Name', 'Phone', 'Email', 'Status', 'Portal login ID', 'Appointment', 'Application no', 'Amount', 'Extra', 'Total', 'Payment mode', 'Remarks'];
+    const head = ['Sl No', 'Date', 'Service', 'Type', 'Scheme', 'Category', 'Source', 'City', 'Handled by', 'Name', 'Mobile', 'Email', 'Status', 'Portal login ID', 'Appointment', 'Ack / application no', 'MMD fee', 'Govt fee', 'Total', 'Payment mode', 'Remarks'];
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lines = sorted.map((r, i) => [
       i + 1, fmtDay(r.date), r.service, r.appType, r.scheme, r.category, r.source, r.city, r.handledBy, r.name, r.phone, r.email,
@@ -209,6 +212,10 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-2">
         <input type="month" className={ctl} value={month} onChange={(e) => setMonth(e.target.value)} disabled={status === 'open'} title="Month the case started" />
         {month && status !== 'open' && <button onClick={() => setMonth('')} className="text-xs font-semibold text-gray-500 hover:text-gray-800">All months</button>}
+        <select className={ctl} value={tab} onChange={(e) => setTab(e.target.value)} title="Service">
+          <option value="">All services</option>
+          {OPS_SERVICES.map((s) => <option key={s} value={s}>{s}{counts[s] ? ` (${counts[s]})` : ''}</option>)}
+        </select>
         <select className={ctl} value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">All statuses</option>
           <option value="open">Open (any month)</option>
@@ -248,13 +255,21 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
       {/* Summary of what's shown */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label={status === 'open' ? 'Open cases' : month ? `Cases · ${monthLabel(month, false)}` : 'Cases'} value={String(sum.total)} />
-        <Stat label="Completed" value={String(sum.completed)} />
+        <Stat
+          label="Completed"
+          value={String(sum.completed)}
+          lines={[`Govt fee ${rupees(sum.doneGovt)}`, `MMD fee ${rupees(sum.doneMmd)}`, `Total ${rupees(sum.doneGovt + sum.doneMmd)}`]}
+        />
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Completion</p>
           <p className={`text-2xl font-extrabold ${pctTone(sum.pct).text}`}>{sum.total ? `${sum.pct}%` : '—'}</p>
           <div className="h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden"><div className={`h-full ${pctTone(sum.pct).bar}`} style={{ width: `${sum.pct}%` }} /></div>
         </div>
-        <Stat label="Amount" value={rupees(sum.amount)} />
+        <Stat
+          label="Total amount"
+          value={rupees(sum.govt + sum.mmd)}
+          lines={[`Govt fee ${rupees(sum.govt)}`, `MMD fee ${rupees(sum.mmd)}`]}
+        />
       </div>
 
       {/* Table */}
@@ -278,23 +293,20 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                 <tr className="bg-gray-50 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap">
                   <th className="px-2.5 py-3">Sl No</th>
                   <th className="px-2.5 py-3">Date</th>
-                  <th className="px-2.5 py-3 min-w-[170px]">Name</th>
-                  <th className="px-2.5 py-3">Mobile</th>
-                  <th className="px-2.5 py-3">Email</th>
-                  {!tab && <th className="px-2.5 py-3">Service</th>}
-                  <th className="px-2.5 py-3">Type</th>
-                  <th className="px-2.5 py-3">Scheme</th>
-                  <th className="px-2.5 py-3">Category</th>
                   <th className="px-2.5 py-3">Source</th>
                   <th className="px-2.5 py-3">City</th>
                   <th className="px-2.5 py-3">Handled by</th>
+                  <th className="px-2.5 py-3">Type</th>
+                  <th className="px-2.5 py-3">Category</th>
+                  <th className="px-2.5 py-3 min-w-[170px]">Name</th>
+                  <th className="px-2.5 py-3">Mobile</th>
+                  <th className="px-2.5 py-3">Email</th>
                   <th className="px-2.5 py-3 min-w-[140px]">Status</th>
-                  <th className="px-2.5 py-3">Login ID</th>
+                  <th className="px-2.5 py-3">ID</th>
                   <th className="px-2.5 py-3">Password</th>
-                  <th className="px-2.5 py-3">Appt.</th>
-                  <th className="px-2.5 py-3">App. no</th>
+                  <th className="px-2.5 py-3">Appointment</th>
                   <th className="px-2.5 py-3 text-right">Amount</th>
-                  <th className="px-2.5 py-3">Payment</th>
+                  <th className="px-2.5 py-3">Mode</th>
                   <th className="px-2.5 py-3" />
                 </tr>
               </thead>
@@ -306,16 +318,21 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                     <tr key={r.id} className="border-t border-gray-50 hover:bg-blue-50/30">
                       <td className={`${td} text-gray-400 tabular-nums`}>{offset + i + 1}</td>
                       <td className={`${td} text-gray-600`}>{fmtDay(r.date)}</td>
-                      <td className="px-2.5 py-2.5 align-top font-semibold text-gray-900">{r.name}</td>
-                      <td className={td}><CopyCell value={r.phone} /></td>
-                      <td className={td}><CopyCell value={r.email} /></td>
-                      {!tab && <td className={`${td} text-gray-600`}>{SERVICE_TAB[r.service] ?? r.service}</td>}
-                      <td className={`${td} text-gray-700`}>{r.appType || '—'}</td>
-                      <td className={`${td} text-gray-700`}>{r.scheme || '—'}</td>
-                      <td className={`${td} text-gray-700`}>{r.category || '—'}</td>
                       <td className={`${td} text-gray-600`}>{r.source || '—'}</td>
                       <td className={`${td} text-gray-600`}>{r.city || '—'}</td>
                       <td className={`${td} font-semibold text-gray-700`}>{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>
+                      <td className={`${td} text-gray-700`}>
+                        {r.appType || '—'}
+                        {!tab && <span className="block text-[11px] text-gray-400">{SERVICE_TAB[r.service] ?? r.service}{r.scheme ? ` · ${r.scheme}` : ''}</span>}
+                        {tab && r.scheme && <span className="block text-[11px] text-gray-400">{r.scheme}</span>}
+                      </td>
+                      <td className={`${td} text-gray-700`}>{r.category || '—'}</td>
+                      <td className="px-2.5 py-2.5 align-top font-semibold text-gray-900">
+                        {r.name}
+                        {r.applicationNo && <span className="block text-[11px] font-normal text-gray-400">Ack/App: <CopyCell value={r.applicationNo} /></span>}
+                      </td>
+                      <td className={td}><CopyCell value={r.phone} /></td>
+                      <td className={td}><CopyCell value={r.email} /></td>
                       <td className={td}>
                         {isAutoCompleteCase(r) ? (
                           // PAN Card from a converted lead: completed automatically, not changeable.
@@ -335,9 +352,11 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                       <td className={td}><CopyCell value={r.portalLoginId} /></td>
                       <td className={td}><PasswordCell c={r} /></td>
                       <td className={`${td} text-gray-600`}>{fmtYmd(r.appointmentDate) || '—'}</td>
-                      <td className={td}><CopyCell value={r.applicationNo} /></td>
                       <td className={`${td} text-right`}>
-                        <span className="font-semibold text-gray-900">{r.extraAmount ? `${r.amount}+${r.extraAmount}` : rupees(r.amount || 0)}</span>
+                        <span className="font-semibold text-gray-900">{rupees((r.amount || 0) + (r.extraAmount || 0))}</span>
+                        <span className="block text-[11px] text-gray-400">
+                          {r.extraAmount ? `Govt ${rupees(r.extraAmount)} · MMD ${rupees(r.amount || 0)}` : `MMD ${rupees(r.amount || 0)}`}
+                        </span>
                       </td>
                       <td className={`${td} text-gray-600`}>{r.paymentMode || '—'}</td>
                       <td className={td}>
@@ -353,22 +372,14 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
           </div>
         )}
         {sorted.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-50">
-            <label className="flex items-center gap-2 text-xs text-gray-500">
-              Rows per page
-              <select
-                value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
-                className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white"
-              >
-                {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </label>
-            <div className="flex-1 min-w-[240px]">
-              <Pagination page={safePage} totalPages={totalPages} total={sorted.length} pageSize={pageSize} onPageChange={setPage} />
-            </div>
-            {totalPages <= 1 && <p className="text-xs text-gray-400">{sorted.length} case{sorted.length === 1 ? '' : 's'}</p>}
-          </div>
+          <Pager
+            page={safePage}
+            totalPages={totalPages}
+            total={sorted.length}
+            pageSize={pageSize}
+            onPage={setPage}
+            onPageSize={setPageSize}
+          />
         )}
       </div>
 
@@ -413,6 +424,52 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+// Footer: "Showing 1–10 of 57", rows-per-page, and First / ‹ 1 2 3 … › / Last.
+function Pager({ page, totalPages, total, pageSize, onPage, onPageSize }: {
+  page: number; totalPages: number; total: number; pageSize: number;
+  onPage: (p: number) => void; onPageSize: (n: number) => void;
+}) {
+  const from = (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const nums: (number | 'gap')[] = [];
+  if (totalPages <= 7) for (let i = 1; i <= totalPages; i++) nums.push(i);
+  else {
+    nums.push(1);
+    if (page > 3) nums.push('gap');
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) nums.push(i);
+    if (page < totalPages - 2) nums.push('gap');
+    nums.push(totalPages);
+  }
+  const btn = 'min-w-[34px] h-[34px] px-2 rounded-lg text-sm font-semibold flex items-center justify-center transition-colors';
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/50">
+      <div className="flex items-center gap-3 text-sm text-gray-500">
+        <span>Showing <b className="text-gray-800">{from}–{to}</b> of <b className="text-gray-800">{total}</b></span>
+        <label className="flex items-center gap-1.5">
+          <select value={pageSize} onChange={(e) => onPageSize(Number(e.target.value))} className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg bg-white">
+            {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n} / page</option>)}
+          </select>
+        </label>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center gap-1">
+          <button onClick={() => onPage(1)} disabled={page === 1} className={`${btn} text-gray-500 hover:bg-white disabled:opacity-30`} title="First page">«</button>
+          <button onClick={() => onPage(page - 1)} disabled={page === 1} className={`${btn} text-gray-500 hover:bg-white disabled:opacity-30`} title="Previous">‹</button>
+          {nums.map((n, i) => n === 'gap'
+            ? <span key={`g${i}`} className="px-1 text-gray-400">…</span>
+            : (
+              <button key={n} onClick={() => onPage(n)} className={`${btn} ${n === page ? 'bg-blue-600 text-white shadow-sm shadow-blue-200' : 'text-gray-600 hover:bg-white border border-transparent hover:border-gray-200'}`}>
+                {n}
+              </button>
+            ))}
+          <button onClick={() => onPage(page + 1)} disabled={page === totalPages} className={`${btn} text-gray-500 hover:bg-white disabled:opacity-30`} title="Next">›</button>
+          <button onClick={() => onPage(totalPages)} disabled={page === totalPages} className={`${btn} text-gray-500 hover:bg-white disabled:opacity-30`} title="Last page">»</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // A value with a copy button (mobile, email, login ID, application no.).
 function CopyCell({ value }: { value?: string }) {
   const [copied, setCopied] = useState(false);
@@ -447,11 +504,12 @@ function PasswordCell({ c }: { c: OpsCase }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, lines }: { label: string; value: string; lines?: string[] }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
       <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{label}</p>
       <p className="text-2xl font-extrabold text-gray-900 tabular-nums">{value}</p>
+      {lines?.map((l) => <p key={l} className="text-[11px] text-gray-500 tabular-nums">{l}</p>)}
     </div>
   );
 }

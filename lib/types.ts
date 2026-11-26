@@ -178,6 +178,10 @@ export interface CaseSummary {
   completionPct: number;
   amount: number;
   completedAmount: number;
+  serviceFee: number;          // MMD service fee (amount)
+  govtFee: number;             // government fee (extraAmount)
+  completedServiceFee: number;
+  completedGovtFee: number;
   byStatus: Record<CaseStatus, number>;
 }
 

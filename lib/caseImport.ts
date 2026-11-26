@@ -5,6 +5,7 @@
 // doesn't shift everything.
 
 import type { CaseStatus, OpsCase } from './types';
+import { serviceFields } from './opsConfig';
 
 export type ImportField =
   | 'date' | 'source' | 'city' | 'handledBy' | 'appType' | 'scheme' | 'category'
@@ -27,20 +28,40 @@ export const IMPORT_FIELDS: { key: ImportField; label: string; header: RegExp }[
   { key: 'portalPassword',  label: 'Portal password',   header: /pass(word)?|pwd/i },
   { key: 'appointmentDate', label: 'Appointment date',  header: /appointment|appt|slot/i },
   { key: 'applicationNo',   label: 'Application / ARN', header: /arn|file\s*no|application\s*no|ack/i },
-  { key: 'amount',          label: 'Amount (e.g. 3500+2000)', header: /amount|fee|charge|price|paid|total/i },
+  { key: 'amount',          label: 'Amount (MMD fee + govt fee, e.g. 3500+2000)', header: /amount|fee|charge|price|paid|total/i },
   { key: 'paymentMode',     label: 'Payment mode',      header: /mode|payment|upi|cash/i },
   { key: 'remarks',         label: 'Remarks',           header: /remark|note|comment/i },
 ];
 
 export type Mapping = Partial<Record<ImportField, number>>; // field -> column index (-1 = none)
 
-// Sample file for the "Download sample CSV" button.
-export const SAMPLE_CSV = [
-  'Date,Source,City,Handled By,Type,Scheme,Category,Name,Mobile,Email,Status,Login ID,Password,Appointment Date,Amount,Payment Mode,Remarks',
-  '21/11/2026,REF,BENGALURU,SUNEETHA,FRESH,NORMAL,ADULT,MR RAVI KUMAR,9876543210,ravi@example.com,IN DOC VEF,,,,3500,UPI,',
-  '22/11/2026,WEBSITE,MYSURU,MURTHY,FRESH,TATKAL,ADULT,MS PRIYA S,9123456780,priya@example.com,IN APPT,PRIY01011995,Priya@123,28/11/2026,3500+2000,UPI,Tatkal fee extra',
-  '23/11/2026,CALL,KOLAR,GOKUL,REISSUE,NORMAL,MINOR,MASTER ARJUN K,9988776655,,COMPLETED,,,,3300,CASH,',
-].join('\r\n');
+// Sample file for the "Download sample CSV" button — only the columns that
+// service uses (PAN Card: no portal login / password; no appointment, etc.).
+export function sampleCsv(service: string): string {
+  const f = serviceFields(service);
+  const t = (i: number) => f.types[i % f.types.length] ?? '';
+  const cols: [string, string, string][] = [
+    ['Date', '21/11/2026', '22/11/2026'],
+    ['Source', 'REF', 'WEBSITE'],
+    ['City', 'BENGALURU', 'MYSURU'],
+    ['Handled By', 'SUNEETHA', 'MURTHY'],
+    ['Type', t(0), t(1)],
+    ...(f.scheme ? [['Scheme', f.scheme[0], f.scheme[1] ?? f.scheme[0]] as [string, string, string]] : []),
+    ...(f.category ? [['Category', 'ADULT', 'ADULT'] as [string, string, string]] : []),
+    ['Name', 'MR RAVI KUMAR', 'MS PRIYA S'],
+    ['Mobile', '9876543210', '9123456780'],
+    ['Email', 'ravi@example.com', 'priya@example.com'],
+    ['Status', 'IN DOC VEF', 'COMPLETED'],
+    ...(f.portal ? [['Login ID', '', 'PRIY01011995'], ['Password', '', 'Priya@123']] as [string, string, string][] : []),
+    ...(f.appointment ? [['Appointment Date', '', '28/11/2026']] as [string, string, string][] : []),
+    [f.applicationNoLabel.replace(/,/g, ' '), '', service === 'PAN Card' ? '881154233432351' : 'ABC123456'],
+    ['Amount', '3500', f.scheme ? '3500+2000' : '3500'],
+    ['Payment Mode', 'UPI', 'CASH'],
+    ['Remarks', '', ''],
+  ];
+  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  return [0, 1, 2].map((i) => cols.map((c) => esc(c[i])).join(',')).join('\r\n');
+}
 
 // Does the first row look like column names rather than a customer?
 export function looksLikeHeader(row: string[]): boolean {

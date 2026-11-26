@@ -222,13 +222,18 @@ export default function CaseEditor({
           )}
 
           <Section title="Payment">
-            <Field label="Amount (₹)"><input className={input} type="number" min={0} value={form.amount || ''} onChange={(e) => set('amount', Number(e.target.value))} /></Field>
-            <Field label="Extra / govt fee (₹)"><input className={input} type="number" min={0} value={form.extraAmount || ''} onChange={(e) => set('extraAmount', Number(e.target.value))} placeholder="e.g. 2000" /></Field>
+            <Field label="Government fee (₹)"><input className={input} type="number" min={0} value={form.extraAmount || ''} onChange={(e) => set('extraAmount', Number(e.target.value))} placeholder="e.g. 2000" /></Field>
+            <Field label="MMD service fee (₹)"><input className={input} type="number" min={0} value={form.amount || ''} onChange={(e) => set('amount', Number(e.target.value))} /></Field>
             <Field label="Payment mode">
               <input className={input} list="case-pay" value={form.paymentMode} onChange={(e) => set('paymentMode', e.target.value)} />
               <datalist id="case-pay">{PAYMENT_MODES.map((t) => <option key={t} value={t} />)}</datalist>
             </Field>
-            <Field label="Total"><div className={`${input} bg-gray-50 font-semibold`}>{rupees(total)}{form.extraAmount ? <span className="text-gray-400 font-normal"> ({form.amount || 0} + {form.extraAmount})</span> : null}</div></Field>
+            <Field label="Total amount">
+              <div className={`${input} bg-gray-50`}>
+                <p className="font-semibold">{rupees(total)}</p>
+                <p className="text-[11px] text-gray-500">Govt fee {rupees(form.extraAmount || 0)} + MMD fee {rupees(form.amount || 0)}</p>
+              </div>
+            </Field>
           </Section>
 
           <Field label="Remarks">
