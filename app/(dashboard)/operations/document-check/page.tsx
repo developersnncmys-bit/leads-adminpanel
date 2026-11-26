@@ -12,7 +12,7 @@ import Link from 'next/link';
 import {
   ArrowLeft, FileSearch, Upload, Trash2, X, CheckCircle, XCircle,
   AlertTriangle, MinusCircle, Loader2, ShieldCheck, ChevronDown, ChevronUp,
-  Plus, RotateCcw, RotateCw, Crop, Maximize2, Download, Phone, UserCheck, UserX,
+  Plus, RotateCcw, RotateCw, Crop, Maximize2, Download, Phone, UserCheck, UserX, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import type { Worker as TesseractWorker } from 'tesseract.js';
 import * as api from '@/lib/api';
@@ -836,6 +836,33 @@ function Viewer({ doc, onClose, onApply }: { doc: DocItem; onClose: () => void; 
   const dragging = useRef(false);
   const made = useRef<string[]>([]); // object URLs this viewer created
 
+  // Zoom: 100% = whole page fits the screen; up to 500% to read small print.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  const [fit, setFit] = useState(1);
+  const [zoom, setZoom] = useState(1);
+  const setZoomClamped = (z: number) => { setZoom(Math.min(5, Math.max(0.5, Math.round(z * 100) / 100))); setSel(null); };
+  const measure = () => {
+    const img = imgRef.current, stage = stageRef.current;
+    if (!img || !stage || !img.naturalWidth) return;
+    setNatural({ w: img.naturalWidth, h: img.naturalHeight });
+    setFit(Math.min((stage.clientWidth - 32) / img.naturalWidth, (stage.clientHeight - 16) / img.naturalHeight, 1));
+  };
+  useEffect(() => {
+    // Ctrl + mouse wheel zooms (non-passive listener so the page itself doesn't zoom).
+    const el = stageRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      setZoom((z) => Math.min(5, Math.max(0.5, Math.round((z * (e.deltaY < 0 ? 1.15 : 1 / 1.15)) * 100) / 100)));
+      setSel(null);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('resize', measure);
+    return () => { el.removeEventListener('wheel', onWheel); window.removeEventListener('resize', measure); };
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -904,6 +931,18 @@ function Viewer({ doc, onClose, onApply }: { doc: DocItem; onClose: () => void; 
           <button className={btn} disabled={busy} onClick={() => rotateBy(90)} title="Rotate right">
             <RotateCw className="w-4 h-4" /> Rotate right
           </button>
+          <div className="flex items-center rounded-xl bg-white/10 text-white">
+            <button className="p-2 hover:bg-white/20 rounded-l-xl disabled:opacity-40" disabled={zoom <= 0.5} onClick={() => setZoomClamped(zoom / 1.25)} title="Zoom out">
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-semibold w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+            <button className="p-2 hover:bg-white/20 disabled:opacity-40" disabled={zoom >= 5} onClick={() => setZoomClamped(zoom * 1.25)} title="Zoom in (or Ctrl + mouse wheel)">
+              <ZoomIn className="w-4 h-4" />
+            </button>
+            <button className="px-2.5 py-2 text-xs font-semibold hover:bg-white/20 rounded-r-xl" onClick={() => setZoomClamped(1)} title="Fit to screen">
+              Fit
+            </button>
+          </div>
           {sel && <button className={btn} disabled={busy} onClick={() => setSel(null)}><X className="w-4 h-4" /> Clear box</button>}
           <button
             className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-40"
@@ -919,15 +958,25 @@ function Viewer({ doc, onClose, onApply }: { doc: DocItem; onClose: () => void; 
           </button>
         </div>
       </div>
-      <div className="flex-1 min-h-0 flex items-center justify-center p-4 pt-0">
+      <div ref={stageRef} className="flex-1 min-h-0 overflow-auto p-4 pt-0">
         <div
-          className="relative select-none touch-none cursor-crosshair"
+          className="relative select-none touch-none cursor-crosshair mx-auto w-fit"
           onPointerDown={(e) => { (e.target as Element).setPointerCapture?.(e.pointerId); dragging.current = true; const p = point(e); setSel({ x0: p.x, y0: p.y, x1: p.x, y1: p.y }); }}
           onPointerMove={(e) => { if (!dragging.current) return; const p = point(e); setSel((s) => (s ? { ...s, x1: p.x, y1: p.y } : s)); }}
           onPointerUp={() => { dragging.current = false; }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img ref={imgRef} src={src} alt={doc.file.name} draggable={false} className="block max-w-[92vw] max-h-[78vh] object-contain rounded-lg" />
+          <img
+            ref={imgRef}
+            src={src}
+            alt={doc.file.name}
+            draggable={false}
+            onLoad={measure}
+            className="block max-w-none rounded-lg"
+            style={natural
+              ? { width: Math.round(natural.w * fit * zoom), height: Math.round(natural.h * fit * zoom) }
+              : { maxWidth: '92vw', maxHeight: '78vh' }}
+          />
           {box && (
             <div
               className="absolute border-2 border-blue-400 bg-blue-400/10 pointer-events-none"

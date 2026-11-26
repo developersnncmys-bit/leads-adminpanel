@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { Search, Filter, Trash2, Download, CheckCircle, Calendar } from 'lucide-react';
+import { Search, Filter, Trash2, Download, CheckCircle, Calendar, MessageSquare } from 'lucide-react';
 import { Lead, LeadStatus } from '@/lib/types';
 import { MOCK_USERS } from '@/lib/mockData';
 import * as api from '@/lib/api';
@@ -52,6 +52,8 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
   const [bulkFollowUpOpen, setBulkFollowUpOpen] = useState(false);
   const [bulkFollowUpDate, setBulkFollowUpDate] = useState('');
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkCommentOpen, setBulkCommentOpen] = useState(false);
+  const [bulkComment, setBulkComment] = useState('');
   // Pagination is mirrored to `?page=N` so a browser-back from a lead detail
   // page (or a manual refresh) lands the user on the same page they were on.
   const initialPage = Math.max(1, Number(searchParams.get('page')) || 1);
@@ -179,6 +181,28 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
     reloadStats();
     if (serverStatus) setReloadKey((k) => k + 1);
     setSuccessMsg(`${ids.length} lead${ids.length > 1 ? 's' : ''} moved to ${label}`);
+  };
+
+  // Bulk comment: the same note added to every selected lead (shows in each
+  // lead's activity; a PAN ack number in it also reaches that lead's case).
+  const submitBulkComment = async () => {
+    const text = bulkComment.trim();
+    if (!text) return;
+    const ids = [...selected];
+    setBulkCommentOpen(false);
+    setBulkBusy(true);
+    let failed = 0;
+    const BATCH = 10;
+    for (let i = 0; i < ids.length; i += BATCH) {
+      const results = await Promise.allSettled(ids.slice(i, i + BATCH).map((id) => api.addLeadNote(id, text, auth.name || 'Admin')));
+      failed += results.filter((r) => r.status === 'rejected').length;
+    }
+    setBulkBusy(false);
+    setBulkComment('');
+    setSelected(new Set());
+    if (serverStatus) setReloadKey((k) => k + 1);
+    const done = ids.length - failed;
+    setSuccessMsg(`Comment added to ${done} lead${done === 1 ? '' : 's'}${failed ? ` (${failed} failed — try again)` : ''}`);
   };
 
   const confirmBulkStatus = async () => {
@@ -512,6 +536,13 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
               </button>
             )}
             <button
+              onClick={() => setBulkCommentOpen(true)}
+              disabled={bulkBusy}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-200 bg-white text-blue-700 hover:bg-blue-50 text-xs font-semibold transition-colors disabled:opacity-50"
+            >
+              <MessageSquare className="w-3.5 h-3.5" /> Add Comment
+            </button>
+            <button
               onClick={deleteSelected}
               disabled={bulkBusy}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
@@ -727,6 +758,40 @@ export default function LeadTable({ leads = [], serverStatus }: Props) {
                 className="px-5 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk comment */}
+      {bulkCommentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setBulkCommentOpen(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md z-10 p-6">
+            <p className="text-base font-bold text-gray-900">Add comment to {selected.size} lead{selected.size > 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-400 mt-0.5 mb-3">The same comment is added to each selected lead&apos;s activity.</p>
+            <textarea
+              autoFocus
+              rows={4}
+              value={bulkComment}
+              onChange={(e) => setBulkComment(e.target.value)}
+              placeholder="Type your comment…"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 resize-none"
+            />
+            <div className="flex justify-end gap-3 mt-4">
+              <button
+                onClick={() => setBulkCommentOpen(false)}
+                className="px-5 py-2 text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitBulkComment}
+                disabled={!bulkComment.trim()}
+                className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-xl transition-colors"
+              >
+                Add comment
               </button>
             </div>
           </div>

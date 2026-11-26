@@ -105,9 +105,12 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   const visible = tab ? rows.filter((r) => r.service === tab) : rows;
   // Columns for this tab, in the order of the team's sheet for that service.
   const cols = columnsFor(tab);
-  // Oldest first, like the sheet, so Sl No runs 1, 2, 3 … down the page.
+  // Latest added first (by when the case was created, so a lead handed over
+  // today is on top even if it converted earlier); Sl No still runs 1, 2, 3 …
+  // down the page.
   const sorted = useMemo(
-    () => [...visible].sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.caseNo - b.caseNo),
+    () => [...visible].sort((a, b) =>
+      String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)) || b.caseNo - a.caseNo),
     [visible],
   );
 
