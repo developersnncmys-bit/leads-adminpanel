@@ -8,9 +8,7 @@ import { SERVICES, VISA_COUNTRIES } from './constants';
 export const CASE_STATUS: { key: CaseStatus; label: string; short: string; cls: string; dot: string }[] = [
   { key: 'new',         label: 'New (not started)',   short: 'New',         cls: 'bg-slate-100 text-slate-700',     dot: '#94a3b8' },
   { key: 'documents',   label: 'Document verification', short: 'Doc verification', cls: 'bg-amber-50 text-amber-700', dot: '#f59e0b' },
-  { key: 'appointment', label: 'Appointment booked',  short: 'Appointment', cls: 'bg-blue-50 text-blue-700',       dot: '#3b82f6' },
-  { key: 'applied',     label: 'Applied / submitted', short: 'Applied',     cls: 'bg-indigo-50 text-indigo-700',   dot: '#6366f1' },
-  { key: 'processing',  label: 'In process',          short: 'In process',  cls: 'bg-cyan-50 text-cyan-700',       dot: '#06b6d4' },
+  { key: 'processing',  label: 'In process (appointment / applied)',          short: 'In process',  cls: 'bg-cyan-50 text-cyan-700',       dot: '#06b6d4' },
   { key: 'completed',   label: 'Completed',           short: 'Completed',   cls: 'bg-emerald-50 text-emerald-700', dot: '#10b981' },
   { key: 'cancelled',   label: 'Cancelled',           short: 'Cancelled',   cls: 'bg-red-50 text-red-700',         dot: '#ef4444' },
 ];

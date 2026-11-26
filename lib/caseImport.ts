@@ -1,6 +1,8 @@
 // Turn rows of the team's old Google Sheet (one CSV per tab) into cases.
-// Columns are matched by their header names; a sheet without a header row is
-// read in the PASSPORT tab's column order.
+// Columns are matched by their header names when there is a header row, and
+// otherwise by what the cells contain (dates, 10-digit mobiles, MR/MS names,
+// FRESH / NORMAL / ADULT, UPI …) — so an extra or missing column in the export
+// doesn't shift everything.
 
 import type { CaseStatus, OpsCase } from './types';
 
@@ -18,7 +20,7 @@ export const IMPORT_FIELDS: { key: ImportField; label: string; header: RegExp }[
   { key: 'scheme',          label: 'Scheme',            header: /scheme|normal|tatkal/i },
   { key: 'category',        label: 'Category',          header: /category|adult|minor/i },
   { key: 'name',            label: 'Customer name *',   header: /name|customer|applicant|client/i },
-  { key: 'phone',           label: 'Phone',             header: /phone|mobile|contact|cell|whats/i },
+  { key: 'phone',           label: 'Mobile',            header: /phone|mobile|contact|cell|whats/i },
   { key: 'email',           label: 'Email',             header: /mail/i },
   { key: 'status',          label: 'Status',            header: /status|stage/i },
   { key: 'portalLoginId',   label: 'Portal login ID',   header: /login|user\s*id|username|user name/i },
@@ -30,14 +32,15 @@ export const IMPORT_FIELDS: { key: ImportField; label: string; header: RegExp }[
   { key: 'remarks',         label: 'Remarks',           header: /remark|note|comment/i },
 ];
 
-// Column order of the team's PASSPORT tab (no header row in the export).
-const SHEET_ORDER: (ImportField | null)[] = [
-  null, 'date', 'source', 'city', 'handledBy', 'appType', 'scheme', 'category',
-  'name', 'phone', 'email', 'status', 'portalLoginId', 'portalPassword',
-  'appointmentDate', 'amount', 'paymentMode',
-];
-
 export type Mapping = Partial<Record<ImportField, number>>; // field -> column index (-1 = none)
+
+// Sample file for the "Download sample CSV" button.
+export const SAMPLE_CSV = [
+  'Date,Source,City,Handled By,Type,Scheme,Category,Name,Mobile,Email,Status,Login ID,Password,Appointment Date,Amount,Payment Mode,Remarks',
+  '21/11/2026,REF,BENGALURU,SUNEETHA,FRESH,NORMAL,ADULT,MR RAVI KUMAR,9876543210,ravi@example.com,IN DOC VEF,,,,3500,UPI,',
+  '22/11/2026,WEBSITE,MYSURU,MURTHY,FRESH,TATKAL,ADULT,MS PRIYA S,9123456780,priya@example.com,IN APPT,PRIY01011995,Priya@123,28/11/2026,3500+2000,UPI,Tatkal fee extra',
+  '23/11/2026,CALL,KOLAR,GOKUL,REISSUE,NORMAL,MINOR,MASTER ARJUN K,9988776655,,COMPLETED,,,,3300,CASH,',
+].join('\r\n');
 
 // Does the first row look like column names rather than a customer?
 export function looksLikeHeader(row: string[]): boolean {
@@ -46,8 +49,74 @@ export function looksLikeHeader(row: string[]): boolean {
   return hits >= 2 && digits <= 1;
 }
 
+// What a cell looks like, for matching columns without a header row.
+const DATE_RE = /^\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}$|^\d{4}-\d{1,2}-\d{1,2}/;
+const CONTENT: { key: ImportField; test: (v: string) => boolean }[] = [
+  { key: 'phone',          test: (v) => /^(\+?91[\s-]?)?[6-9]\d{9}$/.test(v.replace(/[\s-]/g, '')) },
+  { key: 'email',          test: (v) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v) },
+  { key: 'date',           test: (v) => DATE_RE.test(v) },
+  { key: 'scheme',         test: (v) => /^(NORMAL|TATKAL|SPECIAL|TATKAAL)$/i.test(v) },
+  { key: 'category',       test: (v) => /^(ADULT|MINOR|SENIOR)$/i.test(v) },
+  { key: 'appType',        test: (v) => /^(FRESH|RE-?ISSUE|RENEWAL|LOP|LOST|DAMAGED|NEW|CORRECTION|REPRINT|DUPLICATE)\b/i.test(v) },
+  { key: 'source',         test: (v) => /^(CALL|REF|REFERENCE|WEBSITE|WALK-?IN|WHATSAPP|GOOGLE|INSTAGRAM|FACEBOOK|ONLINE)$/i.test(v) },
+  { key: 'paymentMode',    test: (v) => /^(UPI|CASH|CARD|NEFT|IMPS|BANK|GPAY|PHONEPE|PAYTM|ONLINE|PAID)\b/i.test(v) },
+  { key: 'status',         test: (v) => /^(IN\s|COMPLET|DONE|DELIVER|CANCEL|PENDING|APPLIED|PROCESS|APPT)/i.test(v) },
+  { key: 'amount',         test: (v) => /^₹?\s?\d{2,6}(\s?\+\s?\d{2,6})*$/.test(v.replace(/,/g, '')) },
+  { key: 'name',           test: (v) => /^(MR|MRS|MS|MISS|MASTER|DR|SMT|SRI|SHRI|KUM)\.?\s+[A-Z]/i.test(v) },
+  { key: 'portalLoginId',  test: (v) => /^[A-Z]{3,6}\d{6,8}$/i.test(v) },
+  { key: 'portalPassword', test: (v) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@#$!%&*]).{6,20}$/.test(v) && !v.includes(' ') && !v.includes('.') },
+];
+
+function guessByContent(rows: string[][]): Mapping {
+  const sample = rows.slice(0, 60);
+  const width = Math.max(...sample.map((r) => r.length), 0);
+  // Share of non-empty cells in each column that look like each field.
+  const score = (col: number, test: (v: string) => boolean) => {
+    const vals = sample.map((r) => String(r[col] ?? '').trim()).filter(Boolean);
+    return vals.length ? vals.filter(test).length / vals.length : 0;
+  };
+  const map: Mapping = {};
+  const used = new Set<number>();
+  // Serial-number columns (21, 22, 23 …) are not data — skip them so they
+  // aren't mistaken for the amount.
+  for (let c = 0; c < width; c++) {
+    const nums = sample.map((r) => String(r[c] ?? '').trim()).filter(Boolean).map(Number);
+    if (nums.length >= 2 && nums.every((n, i) => Number.isInteger(n) && (i === 0 || n === nums[i - 1] + 1))) used.add(c);
+  }
+  const pairs: { key: ImportField; col: number; s: number }[] = [];
+  for (const f of CONTENT) for (let c = 0; c < width; c++) pairs.push({ key: f.key, col: c, s: score(c, f.test) });
+  // Best matches first; each field and column used once.
+  for (const p of pairs.sort((a, b) => b.s - a.s)) {
+    if (p.s < 0.5 || map[p.key] !== undefined || used.has(p.col)) continue;
+    map[p.key] = p.col; used.add(p.col);
+  }
+  // Two date columns: the earlier one is the case date, the later the appointment.
+  const dateCols = Array.from({ length: width }, (_, c) => c).filter((c) => !used.has(c) || map.date === c)
+    .filter((c) => score(c, (v) => DATE_RE.test(v)) >= 0.3);
+  if (dateCols.length >= 2) { map.date = dateCols[0]; map.appointmentDate = dateCols[1]; used.add(dateCols[1]); }
+
+  // Names without MR/MS: the most "wordy" remaining column.
+  if (map.name === undefined) {
+    let best = -1, bestS = 0;
+    for (let c = 0; c < width; c++) {
+      if (used.has(c)) continue;
+      const s = score(c, (v) => /^[A-Za-z][A-Za-z .']{4,}$/.test(v) && v.trim().split(/\s+/).length >= 2);
+      if (s > bestS) { best = c; bestS = s; }
+    }
+    if (best >= 0 && bestS >= 0.5) { map.name = best; used.add(best); }
+  }
+  // The sheet's order around the name: … City, Handled by, Type … Name …
+  // Left of Type are Handled by, then City; left of the date is the serial no.
+  if (map.appType !== undefined) {
+    const t = map.appType;
+    const free = (c: number) => c >= 0 && c < width && !used.has(c);
+    if (map.handledBy === undefined && free(t - 1)) { map.handledBy = t - 1; used.add(t - 1); }
+    if (map.city === undefined && free(t - 2)) { map.city = t - 2; used.add(t - 2); }
+  }
+  return map;
+}
+
 export function guessMapping(rows: string[][], hasHeader: boolean): Mapping {
-  const width = Math.max(...rows.slice(0, 20).map((r) => r.length), 0);
   const map: Mapping = {};
   if (hasHeader) {
     const used = new Set<number>();
@@ -59,10 +128,9 @@ export function guessMapping(rows: string[][], hasHeader: boolean): Mapping {
       const i = rows[0].findIndex((c, idx) => !used.has(idx) && f.header.test(c.trim()) && !(key === 'name' && /father|mother|spouse/i.test(c)));
       if (i >= 0) { map[key] = i; used.add(i); }
     }
-  } else if (width >= 12) {
-    SHEET_ORDER.forEach((k, i) => { if (k && i < width) map[k] = i; });
+    return map;
   }
-  return map;
+  return guessByContent(rows);
 }
 
 // dd/mm/yyyy, dd-mm-yyyy, dd.mm.yy, yyyy-mm-dd -> YYYY-MM-DD ('' if not a date)
@@ -84,16 +152,15 @@ export function splitAmount(v: string): { amount: number; extraAmount: number } 
   return { amount: parts[0] ?? 0, extraAmount: parts.slice(1).reduce((a, b) => a + b, 0) };
 }
 
-// The sheet's free-text statuses -> case statuses.
+// The sheet's free-text statuses -> case statuses
+// (New, Doc verification, In process, Completed, Cancelled).
 export function toStatus(v: string): CaseStatus {
   const s = v.trim().toUpperCase();
   if (!s) return 'new';
   if (/CANCEL|REFUND|DROP|REJECT/.test(s)) return 'cancelled';
-  if (/COMPLET|DONE|DELIVER|RECEIV|CLOSED|DISPATCH(ED)? TO CUSTOMER|ISSUED/.test(s)) return 'completed';
-  if (/APPT|APPOINT|SLOT/.test(s)) return 'appointment';
-  if (/DOC|VERIF|VEF|PENDING DOC/.test(s)) return 'documents';
-  if (/APPLIED|SUBMIT|FILED|UPLOAD/.test(s)) return 'applied';
-  if (/PROCESS|POLICE|PV\b|PRINT|DISPATCH|TRANSIT/.test(s)) return 'processing';
+  if (/COMPLET|DONE|DELIVER|RECEIV|CLOSED|ISSUED/.test(s)) return 'completed';
+  if (/DOC|VERIF|VEF/.test(s)) return 'documents';
+  if (/APPT|APPOINT|SLOT|APPLIED|SUBMIT|FILED|UPLOAD|PROCESS|POLICE|PV\b|PRINT|DISPATCH|TRANSIT/.test(s)) return 'processing';
   return 'new';
 }
 

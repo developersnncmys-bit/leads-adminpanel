@@ -4,10 +4,10 @@
 // Google Sheets: open the tab -> File -> Download -> Comma-separated values (.csv).
 
 import { useEffect, useMemo, useState } from 'react';
-import { X, Upload, Loader2, CheckCircle, AlertTriangle, FileSpreadsheet } from 'lucide-react';
+import { X, Upload, Loader2, CheckCircle, AlertTriangle, FileSpreadsheet, Download } from 'lucide-react';
 import * as api from '@/lib/api';
 import { parseCsv } from '@/lib/csv';
-import { IMPORT_FIELDS, guessMapping, looksLikeHeader, rowToCase, type ImportField, type Mapping } from '@/lib/caseImport';
+import { IMPORT_FIELDS, SAMPLE_CSV, guessMapping, looksLikeHeader, rowToCase, type ImportField, type Mapping } from '@/lib/caseImport';
 import { OPS_SERVICES, rupees, statusInfo } from '@/lib/opsConfig';
 
 export default function ImportCasesModal({ defaultService, onClose, onDone }: {
@@ -51,6 +51,15 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
     load(await f.text(), f.name);
   };
 
+  const downloadSample = () => {
+    const blob = new Blob(['﻿' + SAMPLE_CSV], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'operations-import-sample.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const toggleHeader = (v: boolean) => { setHasHeader(v); setMap(guessMapping(rows, v)); };
 
   const dataRows = useMemo(() => (hasHeader ? rows.slice(1) : rows), [rows, hasHeader]);
@@ -86,7 +95,11 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
             <p className="text-base font-bold text-gray-900">Import from your sheet</p>
             <p className="text-xs text-gray-400">
               In Google Sheets open one tab (e.g. PASSPORT) → <b>File → Download → Comma-separated values (.csv)</b>, then choose that file here. Repeat for each tab.
+              Rows for a customer who is already a converted lead (same mobile + service) are linked to that lead — no second case.
             </p>
+            <button onClick={downloadSample} className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-800">
+              <Download className="w-3.5 h-3.5" /> Download sample CSV
+            </button>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100" title="Close"><X className="w-5 h-5 text-gray-500" /></button>
         </div>
@@ -95,8 +108,10 @@ export default function ImportCasesModal({ defaultService, onClose, onDone }: {
           {result ? (
             <div className="text-center py-8">
               <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-              <p className="text-lg font-bold text-gray-900">{result.created} case{result.created === 1 ? '' : 's'} imported</p>
+              <p className="text-lg font-bold text-gray-900">{result.created + (result.linked || 0)} case{result.created + (result.linked || 0) === 1 ? '' : 's'} imported</p>
               <p className="text-sm text-gray-500 mt-1">
+                {result.linked ? `${result.linked} matched a converted lead and were linked to it (no longer waiting for handover). ` : ''}
+                {result.merged ? `${result.merged} already had a case from their lead — missing details were filled in, no new case. ` : ''}
                 {result.duplicates ? `${result.duplicates} already existed and were skipped. ` : ''}
                 {result.errors.length ? `${result.errors.length} row(s) could not be imported.` : ''}
               </p>

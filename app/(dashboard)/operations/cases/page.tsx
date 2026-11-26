@@ -8,7 +8,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Search, Loader2, Download, ArrowLeft, ClipboardList, RefreshCw, Upload, UserCheck, ArrowRight } from 'lucide-react';
+import { Search, Loader2, Download, ArrowLeft, ClipboardList, RefreshCw, Upload, UserCheck, ArrowRight, Pencil, Copy, Check, Eye } from 'lucide-react';
 import * as api from '@/lib/api';
 import type { OpsCase, CaseStatus } from '@/lib/types';
 import {
@@ -17,6 +17,7 @@ import {
 import OpsGate from '@/components/operations/OpsGate';
 import CaseEditor from '@/components/operations/CaseEditor';
 import HandoverModal from '@/components/operations/HandoverModal';
+import Pagination from '@/components/Pagination';
 import ImportCasesModal from '@/components/operations/ImportCasesModal';
 
 export default function CasesPage() {
@@ -33,6 +34,9 @@ export default function CasesPage() {
 
 const fmtDate = (iso: string) =>
   iso ? new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' }) : '';
+// 26/11/2026 — full date, like the sheet.
+const fmtDay = (iso: string) =>
+  iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Kolkata' }) : '';
 const fmtYmd = (ymd: string) => {
   if (!ymd) return '';
   const [y, m, d] = ymd.split('-');
@@ -100,6 +104,20 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   }, [rows]);
   const tabs = OPS_SERVICES.filter((s) => counts[s] || s === tab || ['Passport', 'PAN Card', 'Police Verification Certificate (PVC)', 'Senior Citizen Card', 'Affidavits / Annexure', 'Complaint Copy'].includes(s));
   const visible = tab ? rows.filter((r) => r.service === tab) : rows;
+  // Oldest first, like the sheet, so Sl No runs 1, 2, 3 … down the page.
+  const sorted = useMemo(
+    () => [...visible].sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.caseNo - b.caseNo),
+    [visible],
+  );
+
+  // Pagination — back to page 1 whenever the filters or tab change.
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  useEffect(() => { setPage(1); }, [tab, month, status, handledBy, search, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pageRows = sorted.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const offset = (safePage - 1) * pageSize;
 
   const sum = useMemo(() => {
     const completed = visible.filter((r) => r.status === 'completed').length;
@@ -124,10 +142,10 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   };
 
   const exportCsv = () => {
-    const head = ['Case', 'Date', 'Service', 'Type', 'Scheme', 'Category', 'Source', 'City', 'Handled by', 'Name', 'Phone', 'Email', 'Status', 'Portal login ID', 'Appointment', 'Application no', 'Amount', 'Extra', 'Total', 'Payment mode', 'Remarks'];
+    const head = ['Sl No', 'Date', 'Service', 'Type', 'Scheme', 'Category', 'Source', 'City', 'Handled by', 'Name', 'Phone', 'Email', 'Status', 'Portal login ID', 'Appointment', 'Application no', 'Amount', 'Extra', 'Total', 'Payment mode', 'Remarks'];
     const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lines = visible.map((r) => [
-      r.caseNo, fmtDate(r.date), r.service, r.appType, r.scheme, r.category, r.source, r.city, r.handledBy, r.name, r.phone, r.email,
+    const lines = sorted.map((r, i) => [
+      i + 1, fmtDay(r.date), r.service, r.appType, r.scheme, r.category, r.source, r.city, r.handledBy, r.name, r.phone, r.email,
       statusInfo(r.status).label, r.portalLoginId, fmtYmd(r.appointmentDate), r.applicationNo, r.amount, r.extraAmount,
       (r.amount || 0) + (r.extraAmount || 0), r.paymentMode, r.remarks,
     ].map(esc).join(','));
@@ -251,40 +269,54 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
             <p className="text-xs text-gray-400 mt-1">Leads marked Converted appear here automatically. Older work: use “Import sheet”.</p>
           </div>
         ) : (
+          // Sheet-style: one column per field, oldest first with Sl. No 1…N,
+          // text selectable, copy buttons on the fields people paste elsewhere.
+          // Edit with the pencil at the end of the row.
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-[13px] select-text">
               <thead>
-                <tr className="bg-gray-50 text-left text-[11px] font-bold uppercase tracking-wide text-gray-400">
-                  <th className="px-3 py-3">#</th>
-                  <th className="px-3 py-3">Date</th>
-                  <th className="px-3 py-3 min-w-[180px]">Customer</th>
-                  {!tab && <th className="px-3 py-3">Service</th>}
-                  <th className="px-3 py-3">Type</th>
-                  <th className="px-3 py-3">City / source</th>
-                  <th className="px-3 py-3">Handled by</th>
-                  <th className="px-3 py-3 min-w-[160px]">Status</th>
-                  <th className="px-3 py-3">Appt.</th>
-                  <th className="px-3 py-3 text-right">Amount</th>
+                <tr className="bg-gray-50 text-left text-[10px] font-bold uppercase tracking-wide text-gray-400 whitespace-nowrap">
+                  <th className="px-2.5 py-3">Sl No</th>
+                  <th className="px-2.5 py-3">Date</th>
+                  <th className="px-2.5 py-3 min-w-[170px]">Name</th>
+                  <th className="px-2.5 py-3">Mobile</th>
+                  <th className="px-2.5 py-3">Email</th>
+                  {!tab && <th className="px-2.5 py-3">Service</th>}
+                  <th className="px-2.5 py-3">Type</th>
+                  <th className="px-2.5 py-3">Scheme</th>
+                  <th className="px-2.5 py-3">Category</th>
+                  <th className="px-2.5 py-3">Source</th>
+                  <th className="px-2.5 py-3">City</th>
+                  <th className="px-2.5 py-3">Handled by</th>
+                  <th className="px-2.5 py-3 min-w-[140px]">Status</th>
+                  <th className="px-2.5 py-3">Login ID</th>
+                  <th className="px-2.5 py-3">Password</th>
+                  <th className="px-2.5 py-3">Appt.</th>
+                  <th className="px-2.5 py-3">App. no</th>
+                  <th className="px-2.5 py-3 text-right">Amount</th>
+                  <th className="px-2.5 py-3">Payment</th>
+                  <th className="px-2.5 py-3" />
                 </tr>
               </thead>
               <tbody>
-                {visible.map((r) => {
+                {pageRows.map((r, i) => {
                   const st = statusInfo(r.status);
+                  const td = 'px-2.5 py-2.5 align-top whitespace-nowrap';
                   return (
-                    <tr key={r.id} onClick={() => setEditing(r)} className="border-t border-gray-50 hover:bg-blue-50/40 cursor-pointer align-top">
-                      <td className="px-3 py-3 text-gray-400 tabular-nums">{r.caseNo}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-gray-600">{fmtDate(r.date)}</td>
-                      <td className="px-3 py-3">
-                        <p className="font-semibold text-gray-900">{r.name}</p>
-                        <p className="text-xs text-gray-400">{r.phone}{r.applicationNo ? ` · ${r.applicationNo}` : ''}</p>
-                      </td>
-                      {!tab && <td className="px-3 py-3 text-gray-600 whitespace-nowrap">{SERVICE_TAB[r.service] ?? r.service}</td>}
-                      <td className="px-3 py-3 text-xs text-gray-600">
-                        {[r.appType, r.scheme, r.category].filter(Boolean).join(' · ') || <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-gray-600">{r.city || '—'}<span className="block text-gray-400">{r.source}</span></td>
-                      <td className="px-3 py-3 text-xs font-semibold text-gray-700">{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>
-                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                    <tr key={r.id} className="border-t border-gray-50 hover:bg-blue-50/30">
+                      <td className={`${td} text-gray-400 tabular-nums`}>{offset + i + 1}</td>
+                      <td className={`${td} text-gray-600`}>{fmtDay(r.date)}</td>
+                      <td className="px-2.5 py-2.5 align-top font-semibold text-gray-900">{r.name}</td>
+                      <td className={td}><CopyCell value={r.phone} /></td>
+                      <td className={td}><CopyCell value={r.email} /></td>
+                      {!tab && <td className={`${td} text-gray-600`}>{SERVICE_TAB[r.service] ?? r.service}</td>}
+                      <td className={`${td} text-gray-700`}>{r.appType || '—'}</td>
+                      <td className={`${td} text-gray-700`}>{r.scheme || '—'}</td>
+                      <td className={`${td} text-gray-700`}>{r.category || '—'}</td>
+                      <td className={`${td} text-gray-600`}>{r.source || '—'}</td>
+                      <td className={`${td} text-gray-600`}>{r.city || '—'}</td>
+                      <td className={`${td} font-semibold text-gray-700`}>{r.handledBy || <span className="text-amber-600 font-normal">Unassigned</span>}</td>
+                      <td className={td}>
                         {isAutoCompleteCase(r) ? (
                           // PAN Card from a converted lead: completed automatically, not changeable.
                           <span className={`inline-block text-xs font-semibold rounded-lg px-2.5 py-1.5 ${statusInfo('completed').cls}`} title="PAN Card: completed when the lead converted">
@@ -300,16 +332,42 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                           </select>
                         )}
                       </td>
-                      <td className="px-3 py-3 text-xs text-gray-600 whitespace-nowrap">{fmtYmd(r.appointmentDate) || '—'}</td>
-                      <td className="px-3 py-3 text-right whitespace-nowrap">
-                        <p className="font-semibold text-gray-900">{rupees((r.amount || 0) + (r.extraAmount || 0))}</p>
-                        <p className="text-[11px] text-gray-400">{r.extraAmount ? `${r.amount}+${r.extraAmount}` : ''}{r.paymentMode ? ` ${r.paymentMode}` : ''}</p>
+                      <td className={td}><CopyCell value={r.portalLoginId} /></td>
+                      <td className={td}><PasswordCell c={r} /></td>
+                      <td className={`${td} text-gray-600`}>{fmtYmd(r.appointmentDate) || '—'}</td>
+                      <td className={td}><CopyCell value={r.applicationNo} /></td>
+                      <td className={`${td} text-right`}>
+                        <span className="font-semibold text-gray-900">{r.extraAmount ? `${r.amount}+${r.extraAmount}` : rupees(r.amount || 0)}</span>
+                      </td>
+                      <td className={`${td} text-gray-600`}>{r.paymentMode || '—'}</td>
+                      <td className={td}>
+                        <button onClick={() => setEditing(r)} className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50" title="Edit case">
+                          <Pencil className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {sorted.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-gray-50">
+            <label className="flex items-center gap-2 text-xs text-gray-500">
+              Rows per page
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="px-2 py-1 text-xs border border-gray-200 rounded-lg bg-white"
+              >
+                {[25, 50, 100, 200].map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </label>
+            <div className="flex-1 min-w-[240px]">
+              <Pagination page={safePage} totalPages={totalPages} total={sorted.length} pageSize={pageSize} onPageChange={setPage} />
+            </div>
+            {totalPages <= 1 && <p className="text-xs text-gray-400">{sorted.length} case{sorted.length === 1 ? '' : 's'}</p>}
           </div>
         )}
       </div>
@@ -352,6 +410,40 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
         />
       )}
     </div>
+  );
+}
+
+// A value with a copy button (mobile, email, login ID, application no.).
+function CopyCell({ value }: { value?: string }) {
+  const [copied, setCopied] = useState(false);
+  if (!value) return <span className="text-gray-300">—</span>;
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(value); setCopied(true); setTimeout(() => setCopied(false), 1200); } catch { /* ignore */ }
+  };
+  return (
+    <span className="inline-flex items-center gap-1 group">
+      <span className="text-gray-800 tabular-nums">{value}</span>
+      <button onClick={copy} className="p-0.5 rounded text-gray-300 hover:text-blue-600 opacity-60 group-hover:opacity-100" title="Copy">
+        {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+      </button>
+    </span>
+  );
+}
+
+// Portal password: hidden until "show", then copyable.
+function PasswordCell({ c }: { c: OpsCase }) {
+  const [pw, setPw] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  if (!c.hasPortalPassword) return <span className="text-gray-300">—</span>;
+  if (pw !== null) return <CopyCell value={pw} />;
+  return (
+    <button
+      onClick={async () => { setBusy(true); try { setPw(await api.getCasePassword(c.id)); } catch { setPw(''); } setBusy(false); }}
+      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
+      title="Show password"
+    >
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />} ••••••
+    </button>
   );
 }
 

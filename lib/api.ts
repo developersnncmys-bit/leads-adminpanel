@@ -332,6 +332,8 @@ export async function handOverAllPending(): Promise<{ created: number; failed: n
 
 export interface ImportResult {
   created: number;
+  linked?: number;   // rows matched to a converted lead (case created for that lead)
+  merged?: number;   // rows whose lead already had a case (blanks filled in)
   duplicates: number;
   errors: { row: number; reason: string }[];
 }
