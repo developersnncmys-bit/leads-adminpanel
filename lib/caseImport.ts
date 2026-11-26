@@ -40,6 +40,28 @@ export type Mapping = Partial<Record<ImportField, number>>; // field -> column i
 export function sampleCsv(service: string): string {
   const f = serviceFields(service);
   const t = (i: number) => f.types[i % f.types.length] ?? '';
+  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  const toCsv = (cols: [string, string, string][]) =>
+    [0, 1, 2].map((i) => cols.map((c) => esc(c[i])).join(',')).join('\r\n');
+
+  // PAN Card: exactly the team's PAN sheet columns, in their order.
+  if (service === 'PAN Card') {
+    return toCsv([
+      ['Date', '21/11/2026', '22/11/2026'],
+      ['Source', 'WEBSITE', 'REF'],
+      ['City', 'BENGALURU', 'MYSURU'],
+      ['Type', 'NEW', 'CORRECTION'],
+      ['Handled By', 'GANESH', 'SUNEETHA'],
+      ['Name', 'MR RAVI KUMAR', 'MS PRIYA S'],
+      ['Mobile', '9876543210', '9123456780'],
+      ['Email', 'ravi@example.com', 'priya@example.com'],
+      ['Acknowledgement No', '881154233432351', '881154235535092'],
+      ['Status', 'COMPLETED', 'COMPLETED'],
+      ['Amount', '350', '350'],
+      ['Mode', 'UPI', 'Online (Paytm)'],
+    ]);
+  }
+
   const cols: [string, string, string][] = [
     ['Date', '21/11/2026', '22/11/2026'],
     ['Source', 'REF', 'WEBSITE'],
@@ -59,8 +81,7 @@ export function sampleCsv(service: string): string {
     ['Payment Mode', 'UPI', 'CASH'],
     ['Remarks', '', ''],
   ];
-  const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
-  return [0, 1, 2].map((i) => cols.map((c) => esc(c[i])).join(',')).join('\r\n');
+  return toCsv(cols);
 }
 
 // Does the first row look like column names rather than a customer?

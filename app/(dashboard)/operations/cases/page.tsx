@@ -103,6 +103,8 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
   }, [rows]);
   const tabs = OPS_SERVICES.filter((s) => counts[s] || s === tab || ['Passport', 'PAN Card', 'Police Verification Certificate (PVC)', 'Senior Citizen Card', 'Affidavits / Annexure', 'Complaint Copy'].includes(s));
   const visible = tab ? rows.filter((r) => r.service === tab) : rows;
+  // PAN Card has no category, portal login/password or appointment — hide those columns.
+  const panTab = tab === 'PAN Card';
   // Oldest first, like the sheet, so Sl No runs 1, 2, 3 … down the page.
   const sorted = useMemo(
     () => [...visible].sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.caseNo - b.caseNo),
@@ -297,14 +299,14 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                   <th className="px-2.5 py-3">City</th>
                   <th className="px-2.5 py-3">Handled by</th>
                   <th className="px-2.5 py-3">Type</th>
-                  <th className="px-2.5 py-3">Category</th>
+                  {!panTab && <th className="px-2.5 py-3">Category</th>}
                   <th className="px-2.5 py-3 min-w-[170px]">Name</th>
                   <th className="px-2.5 py-3">Mobile</th>
                   <th className="px-2.5 py-3">Email</th>
                   <th className="px-2.5 py-3 min-w-[140px]">Status</th>
-                  <th className="px-2.5 py-3">ID</th>
-                  <th className="px-2.5 py-3">Password</th>
-                  <th className="px-2.5 py-3">Appointment</th>
+                  {!panTab && <th className="px-2.5 py-3">ID</th>}
+                  {!panTab && <th className="px-2.5 py-3">Password</th>}
+                  {!panTab && <th className="px-2.5 py-3">Appointment</th>}
                   <th className="px-2.5 py-3 text-right">Amount</th>
                   <th className="px-2.5 py-3">Mode</th>
                   <th className="px-2.5 py-3" />
@@ -326,7 +328,7 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                         {!tab && <span className="block text-[11px] text-gray-400">{SERVICE_TAB[r.service] ?? r.service}{r.scheme ? ` · ${r.scheme}` : ''}</span>}
                         {tab && r.scheme && <span className="block text-[11px] text-gray-400">{r.scheme}</span>}
                       </td>
-                      <td className={`${td} text-gray-700`}>{r.category || '—'}</td>
+                      {!panTab && <td className={`${td} text-gray-700`}>{r.category || '—'}</td>}
                       <td className="px-2.5 py-2.5 align-top font-semibold text-gray-900">
                         {r.name}
                         {r.applicationNo && <span className="block text-[11px] font-normal text-gray-400">Ack/App: <CopyCell value={r.applicationNo} /></span>}
@@ -349,9 +351,9 @@ function Cases({ isAdmin }: { isAdmin: boolean }) {
                           </select>
                         )}
                       </td>
-                      <td className={td}><CopyCell value={r.portalLoginId} /></td>
-                      <td className={td}><PasswordCell c={r} /></td>
-                      <td className={`${td} text-gray-600`}>{fmtYmd(r.appointmentDate) || '—'}</td>
+                      {!panTab && <td className={td}><CopyCell value={r.portalLoginId} /></td>}
+                      {!panTab && <td className={td}><PasswordCell c={r} /></td>}
+                      {!panTab && <td className={`${td} text-gray-600`}>{fmtYmd(r.appointmentDate) || '—'}</td>}
                       <td className={`${td} text-right`}>
                         <span className="font-semibold text-gray-900">{rupees((r.amount || 0) + (r.extraAmount || 0))}</span>
                         <span className="block text-[11px] text-gray-400">
