@@ -24,7 +24,6 @@ import {
 } from '@/lib/docCheck';
 import { readImage, type CanvasLike, type MakeCanvas } from '@/lib/docOcr';
 import { buildReportPdf } from '@/lib/docReport';
-import { canUseOperations } from '@/lib/opsConfig';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -128,12 +127,13 @@ async function readPdf(file: File, askPassword: (retry: boolean) => string | nul
 // ---------------------------------------------------------------------------
 
 export default function DocumentCheckPage() {
-  // Admin gate — read the saved login directly so a non-admin never sees the tool.
+  // Open to every logged-in team member (admins and employees) — unlike
+  // Operations Overview / Cases, which stay admin-only.
   const [access, setAccess] = useState<'loading' | 'admin' | 'denied'>('loading');
   useEffect(() => {
     try {
-      const role = JSON.parse(localStorage.getItem('crm-auth') || '{}')?.role;
-      setAccess(canUseOperations(role) ? 'admin' : 'denied');
+      const userId = JSON.parse(localStorage.getItem('crm-auth') || '{}')?.userId;
+      setAccess(userId ? 'admin' : 'denied');
     } catch {
       setAccess('denied');
     }
@@ -150,8 +150,8 @@ export default function DocumentCheckPage() {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center">
         <ShieldCheck className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-        <p className="text-sm font-bold text-gray-900">Admins only</p>
-        <p className="text-sm text-gray-400 mt-1">Document Check is available to admins and the Operations team.</p>
+        <p className="text-sm font-bold text-gray-900">Please log in</p>
+        <p className="text-sm text-gray-400 mt-1">Document Check is available to every team member after login.</p>
       </div>
     );
   }

@@ -87,16 +87,17 @@ export default function MobileDrawer({ open, onClose }: { open: boolean; onClose
           ))}
 
           {/* Operations (admins only), below the leads pipeline */}
+          {/* Operations: Overview + Cases are admin-only; Document Check is for everyone */}
+          <div className="pt-4 pb-1.5 px-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Operations</p>
+          </div>
           {canUseOperations(user.role) && (
             <>
-              <div className="pt-4 pb-1.5 px-3">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Operations</p>
-              </div>
               <NavLink href="/operations" label="Overview" icon={Briefcase} />
               <NavLink href="/operations/cases" label="Cases" icon={ClipboardList} />
-              <NavLink href="/operations/document-check" label="Document Check" icon={FileSearch} />
             </>
           )}
+          <NavLink href="/operations/document-check" label="Document Check" icon={FileSearch} />
 
           <div className="pt-4 pb-1.5 px-3">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Admin</p>

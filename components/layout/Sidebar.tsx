@@ -74,14 +74,15 @@ export default function Sidebar() {
         ))}
 
         {/* Operations (admins only), below the leads pipeline */}
+        {/* Operations: Overview + Cases are admin-only; Document Check is for everyone */}
+        <SectionLabel>Operations</SectionLabel>
         {canUseOperations(user.role) && (
           <>
-            <SectionLabel>Operations</SectionLabel>
             <NavItem href="/operations" icon={Briefcase} label="Overview" active={isActive('/operations')} />
             <NavItem href="/operations/cases" icon={ClipboardList} label="Cases" active={isActive('/operations/cases')} />
-            <NavItem href="/operations/document-check" icon={FileSearch} label="Document Check" active={isActive('/operations/document-check')} />
           </>
         )}
+        <NavItem href="/operations/document-check" icon={FileSearch} label="Document Check" active={isActive('/operations/document-check')} />
 
         {user.role === 'admin' && (
           <>
